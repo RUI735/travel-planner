@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Spot, RouteSegment } from '../types/trip';
 import SpotReminders from './SpotReminders';
@@ -26,13 +26,10 @@ export default function SpotCard({
 }: Props) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState(spot.notes);
-  const inputRef = useRef<TextInput>(null);
 
   const handleNotesPress = () => {
     setNotesDraft(spot.notes);
     setIsEditingNotes(true);
-    // 延迟聚焦，等 TextInput 渲染完成
-    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleNotesBlur = () => {
@@ -72,7 +69,7 @@ export default function SpotCard({
       {/* 备注区域：点击切换编辑 */}
       {isEditingNotes ? (
         <TextInput
-          ref={inputRef}
+          autoFocus
           style={styles.notesInput}
           value={notesDraft}
           onChangeText={setNotesDraft}
