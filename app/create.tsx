@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Switch, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useTripStore } from '../src/store/useTripStore';
@@ -23,7 +23,6 @@ export default function CreateScreen() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedPrefs, setSelectedPrefs] = useState<string[]>([]);
-  const [isStudent, setIsStudent] = useState(false);
   const [partySize, setPartySize] = useState(2);
   const [budgetTier, setBudgetTier] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,13 +101,14 @@ export default function CreateScreen() {
 
     setStatus('generating');
     try {
+      const student = selectedPrefs.includes('学生优惠');
       const tripData = await generateTrip({
         destination: destination.trim(),
         startDate,
         endDate,
         preferences: selectedPrefs,
         maxSpotsPerDay: 4,
-        isStudent,
+        isStudent: student,
         partySize,
         budgetTier,
       });
@@ -116,7 +116,7 @@ export default function CreateScreen() {
       const trip: Trip = {
         ...tripData,
         id: `trip-${Date.now()}`,
-        isStudent,
+        isStudent: student,
         partySize,
         budgetTier,
         createdAt: new Date().toISOString(),
@@ -269,19 +269,6 @@ export default function CreateScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
-
-        <View style={styles.studentRow}>
-          <View style={styles.studentLabel}>
-            <Text style={styles.studentIcon}>🎓</Text>
-            <Text style={styles.label}>我是学生</Text>
-          </View>
-          <Switch
-            value={isStudent}
-            onValueChange={setIsStudent}
-            trackColor={{ false: Colors.textMuted, true: Colors.primary }}
-            thumbColor={Colors.white}
-          />
         </View>
 
         <TouchableOpacity

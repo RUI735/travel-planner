@@ -173,6 +173,7 @@ export default function DayDetailScreen() {
                   : undefined
               }
               isAffected={day.weatherAlert?.affectedSpotIds.includes(spot.id)}
+              isStudentTrip={currentTrip?.isStudent ?? false}
               onNotesChange={(text) => updateSpotNotes(date, spot.id, text)}
               onDelete={() => {
                 updateDay(date, (d) => ({

@@ -13,6 +13,7 @@ interface Props {
   drag?: () => void;
   isActive?: boolean;
   onNotesChange?: (text: string) => void;
+  isStudentTrip?: boolean;
 }
 
 export default function SpotCard({
@@ -24,9 +25,14 @@ export default function SpotCard({
   drag,
   isActive,
   onNotesChange,
+  isStudentTrip,
 }: Props) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState(spot.notes);
+
+  const reminders = isStudentTrip
+    ? spot.reminders
+    : spot.reminders.filter((r) => r.type !== 'studentDiscount');
 
   const handleNotesPress = () => {
     setNotesDraft(spot.notes);
@@ -65,7 +71,7 @@ export default function SpotCard({
         )}
       </View>
 
-      <SpotReminders reminders={spot.reminders} />
+      <SpotReminders reminders={reminders} />
 
       {/* 备注区域：点击切换编辑 */}
       {isEditingNotes ? (
