@@ -87,10 +87,12 @@ export async function fetchWeather(
     // QWeather accepts direct lat,lng coordinates — no geo lookup needed
     const url = `${WEATHER_BASE}/7d?location=${lng.toFixed(2)},${lat.toFixed(2)}&key=${API_KEY}`;
     const res = await fetch(url);
-    const data = await res.json();
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 100) }; }
 
     if (data.code !== '200' || !data.daily) {
-      throw new Error(`QWeather code:${data.code}`);
+      throw new Error(data.raw ? `raw:${data.raw}` : `code:${data.code}`);
     }
 
     const targetDate = date.split('T')[0];
