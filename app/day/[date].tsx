@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTripStore } from '../../src/store/useTripStore';
 import { Day, Spot } from '../../src/types/trip';
@@ -8,14 +8,12 @@ import { calculateAllRoutes, checkRouteOptimality, searchPOI, POIResult } from '
 import WeatherBanner from '../../src/components/WeatherBanner';
 import SpotCard from '../../src/components/SpotCard';
 import MapRoute from '../../src/components/MapRoute';
-import NestableDraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 
 export default function DayDetailScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const currentTrip = useTripStore((s) => s.currentTrip);
   const updateDay = useTripStore((s) => s.updateDay);
   const addSpotToDay = useTripStore((s) => s.addSpot);
-  const reorderSpots = useTripStore((s) => s.reorderSpots);
   const updateSpotNotes = useTripStore((s) => s.updateSpotNotes);
   const [loading, setLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -104,21 +102,6 @@ export default function DayDetailScreen() {
 
   const sortedSpots = [...day.spots].sort((a, b) => a.order - b.order);
 
-  const handleDragEnd = useCallback(
-    ({ data }: { data: Spot[] }) => {
-      const spotIds = data.map((s) => s.id);
-      reorderSpots(date, spotIds);
-    },
-    [date, reorderSpots]
-  );
-
-  const handleNotesChange = useCallback(
-    (spotId: string, text: string) => {
-      updateSpotNotes(date, spotId, text);
-    },
-    [date, updateSpotNotes]
-  );
-
   return (
     <ScrollView style={styles.container}>
       {day.weather && (
@@ -152,40 +135,28 @@ export default function DayDetailScreen() {
       {sortedSpots.length > 0 && (
         <View style={styles.spotsSection}>
           <Text style={styles.sectionTitle}>景点安排</Text>
-          <NestableDraggableFlatList
-            data={sortedSpots}
-            keyExtractor={(item) => item.id}
-            onDragEnd={handleDragEnd}
-            renderItem={({ item, drag, isActive, getIndex }: RenderItemParams<Spot>) => {
-              const idx = getIndex() ?? 0;
-              const route =
+          {sortedSpots.map((spot, idx) => (
+            <SpotCard
+              key={spot.id}
+              spot={spot}
+              index={idx}
+              route={
                 idx < sortedSpots.length - 1
-                  ? day.routes.find((r) => r.fromSpotId === item.id)
-                  : undefined;
-              return (
-                <ScaleDecorator>
-                  <SpotCard
-                    spot={item}
-                    index={idx}
-                    route={route}
-                    isAffected={day.weatherAlert?.affectedSpotIds.includes(item.id)}
-                    drag={drag}
-                    isActive={isActive}
-                    onNotesChange={(text) => handleNotesChange(item.id, text)}
-                    onDelete={() => {
-                      updateDay(date, (d) => ({
-                        ...d,
-                        spots: d.spots
-                          .filter((s) => s.id !== item.id)
-                          .map((s, i) => ({ ...s, order: i + 1 })),
-                      }));
-                    }}
-                  />
-                </ScaleDecorator>
-              );
-            }}
-            scrollEnabled={false}
-          />
+                  ? day.routes.find((r) => r.fromSpotId === spot.id)
+                  : undefined
+              }
+              isAffected={day.weatherAlert?.affectedSpotIds.includes(spot.id)}
+              onNotesChange={(text) => updateSpotNotes(date, spot.id, text)}
+              onDelete={() => {
+                updateDay(date, (d) => ({
+                  ...d,
+                  spots: d.spots
+                    .filter((s) => s.id !== spot.id)
+                    .map((s, i) => ({ ...s, order: i + 1 })),
+                }));
+              }}
+            />
+          ))}
         </View>
       )}
 
