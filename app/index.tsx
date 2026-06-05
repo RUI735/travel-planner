@@ -8,6 +8,12 @@ import BudgetSummary from '../src/components/BudgetSummary';
 import EmptyState from '../src/components/EmptyState';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '../src/theme';
 
+const BUDGET_LABELS: Record<string, string> = {
+  economy: '经济型',
+  comfort: '舒适型',
+  luxury: '轻奢型',
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const { currentTrip, status } = useTripStore();
@@ -35,7 +41,6 @@ export default function HomeScreen() {
   const metaParts: string[] = [];
   metaParts.push(`👥 ${currentTrip.partySize}人`);
   if (currentTrip.budgetTier) {
-    const BUDGET_LABELS: Record<string, string> = { economy: '经济型', comfort: '舒适型', luxury: '轻奢型' };
     metaParts.push(`💰 ${BUDGET_LABELS[currentTrip.budgetTier] ?? currentTrip.budgetTier}`);
   }
   if (currentTrip.isStudent) metaParts.push('🎓 学生');
@@ -93,5 +98,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     alignItems: 'center',
   },
-  createButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  createButtonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
 });
