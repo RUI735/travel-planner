@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTripStore } from '../../src/store/useTripStore';
@@ -8,7 +8,6 @@ import { calculateAllRoutes, checkRouteOptimality, searchPOI, POIResult } from '
 import WeatherBanner from '../../src/components/WeatherBanner';
 import SpotCard from '../../src/components/SpotCard';
 import MapRoute from '../../src/components/MapRoute';
-import DraggableSpotList from '../../src/components/DraggableSpotList';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '../../src/theme';
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -30,8 +29,6 @@ export default function DayDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<POIResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-
   const destination = currentTrip?.destination ?? '';
   const router = useRouter();
 
@@ -119,7 +116,7 @@ export default function DayDetailScreen() {
   const sortedSpots = [...day.spots].sort((a, b) => a.order - b.order);
 
   return (
-    <ScrollView style={styles.container} scrollEnabled={!isDragging}>
+    <ScrollView style={styles.container}>
       <View style={styles.dayNav}>
         {prevDate ? (
           <TouchableOpacity onPress={() => router.replace(`/day/${prevDate}`)}>
@@ -165,35 +162,39 @@ export default function DayDetailScreen() {
       <View style={styles.spotsSection}>
         <Text style={styles.sectionTitle}>景点安排</Text>
         {sortedSpots.length > 0 ? (
-          <DraggableSpotList
-            items={sortedSpots}
-            onReorder={(ids) => reorderSpots(date, ids)}
-            onDragActive={setIsDragging}
-            renderItem={(item, idx, isDragging, dragTrigger) => (
-              <SpotCard
-                spot={item}
-                index={idx}
-                route={
-                  idx < sortedSpots.length - 1
-                    ? day.routes.find((r) => r.fromSpotId === item.id)
-                    : undefined
-                }
-                isAffected={day.weatherAlert?.affectedSpotIds.includes(item.id)}
-                isStudentTrip={currentTrip?.isStudent ?? false}
-                dragHandlers={dragTrigger.panHandlers}
-                isActive={isDragging}
-                onNotesChange={(text) => updateSpotNotes(date, item.id, text)}
-                onDelete={() => {
-                  updateDay(date, (d) => ({
-                    ...d,
-                    spots: d.spots
-                      .filter((s) => s.id !== item.id)
-                      .map((s, i) => ({ ...s, order: i + 1 })),
-                  }));
-                }}
-              />
-            )}
-          />
+          sortedSpots.map((spot, idx) => (
+            <SpotCard
+              key={spot.id}
+              spot={spot}
+              index={idx}
+              route={
+                idx < sortedSpots.length - 1
+                  ? day.routes.find((r) => r.fromSpotId === spot.id)
+                  : undefined
+              }
+              isAffected={day.weatherAlert?.affectedSpotIds.includes(spot.id)}
+              isStudentTrip={currentTrip?.isStudent ?? false}
+              onNotesChange={(text) => updateSpotNotes(date, spot.id, text)}
+              onMoveUp={idx > 0 ? () => {
+                const ids = sortedSpots.map((s) => s.id);
+                [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
+                reorderSpots(date, ids);
+              } : undefined}
+              onMoveDown={idx < sortedSpots.length - 1 ? () => {
+                const ids = sortedSpots.map((s) => s.id);
+                [ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
+                reorderSpots(date, ids);
+              } : undefined}
+              onDelete={() => {
+                updateDay(date, (d) => ({
+                  ...d,
+                  spots: d.spots
+                    .filter((s) => s.id !== spot.id)
+                    .map((s, i) => ({ ...s, order: i + 1 })),
+                }));
+              }}
+            />
+          ))
         ) : (
           <View style={styles.emptySpots}>
             <Text style={styles.emptySpotsIcon}>📍</Text>

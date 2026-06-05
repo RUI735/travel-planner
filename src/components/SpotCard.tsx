@@ -15,6 +15,8 @@ interface Props {
   isActive?: boolean;
   onNotesChange?: (text: string) => void;
   isStudentTrip?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 export default function SpotCard({
@@ -28,6 +30,8 @@ export default function SpotCard({
   isActive,
   onNotesChange,
   isStudentTrip,
+  onMoveUp,
+  onMoveDown,
 }: Props) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState(spot.notes);
@@ -104,9 +108,21 @@ export default function SpotCard({
       )}
 
       {onDelete && (
-        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-          <Text style={styles.deleteText}>移除</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onMoveUp && (
+            <TouchableOpacity style={styles.moveBtn} onPress={onMoveUp}>
+              <Text style={styles.moveBtnText}>▲</Text>
+            </TouchableOpacity>
+          )}
+          {onMoveDown && (
+            <TouchableOpacity style={styles.moveBtn} onPress={onMoveDown}>
+              <Text style={styles.moveBtnText}>▼</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
+            <Text style={styles.deleteText}>移除</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {route && (
@@ -171,6 +187,9 @@ const styles = StyleSheet.create({
   routeRow: { marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.primaryLight, alignItems: 'center' },
   routeIcon: { fontSize: FontSize.md, color: Colors.textMuted },
   routeText: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: Spacing.xs },
-  deleteBtn: { alignSelf: 'flex-end', marginTop: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.sm, backgroundColor: Colors.primaryLight },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.sm, marginTop: Spacing.sm },
+  moveBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.sm, backgroundColor: Colors.primaryLight },
+  moveBtnText: { fontSize: 14, color: Colors.primary },
+  deleteBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.sm, backgroundColor: Colors.primaryLight },
   deleteText: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '500' },
 });
