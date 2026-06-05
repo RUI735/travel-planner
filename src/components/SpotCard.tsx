@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Spot, RouteSegment } from '../types/trip';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '../theme';
 import SpotReminders from './SpotReminders';
 
 interface Props {
@@ -75,7 +76,7 @@ export default function SpotCard({
           onChangeText={setNotesDraft}
           onBlur={handleNotesBlur}
           placeholder="输入备注..."
-          placeholderTextColor="#bbb"
+          placeholderTextColor={Colors.textMuted}
           multiline
           returnKeyType="done"
           blurOnSubmit
@@ -109,56 +110,52 @@ export default function SpotCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    ...Shadow.card,
   },
-  cardAffected: { borderWidth: 2, borderColor: '#FFC107' },
+  cardAffected: { borderWidth: 2, borderColor: Colors.warning },
   cardActive: {
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
     transform: [{ scale: 1.03 }],
   },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   dragHandle: {
     fontSize: 20,
-    color: '#bbb',
+    color: Colors.textMuted,
     fontWeight: '700',
-    paddingRight: 4,
+    paddingRight: Spacing.xs,
   },
   orderBadge: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#4A90D9', justifyContent: 'center', alignItems: 'center',
+    width: 28, height: 28, borderRadius: Radius.full,
+    backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center',
   },
-  orderText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  name: { fontSize: 16, fontWeight: '600', color: '#333', flex: 1 },
+  orderText: { color: Colors.white, fontSize: FontSize.sm, fontWeight: '600' },
+  name: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text, flex: 1 },
   affectedBadge: {
-    backgroundColor: '#FFF3CD', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+    backgroundColor: Colors.primaryLight, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radius.sm,
   },
-  affectedText: { fontSize: 11, color: '#856404', fontWeight: '500' },
-  notes: { marginTop: 8, fontSize: 13, color: '#888', fontStyle: 'italic' },
-  notesPlaceholder: { color: '#ccc', fontStyle: 'italic' },
+  affectedText: { fontSize: FontSize.xs, color: Colors.primary, fontWeight: '500' },
+  notes: { marginTop: Spacing.sm, fontSize: FontSize.sm, color: Colors.textSecondary, fontStyle: 'italic' },
+  notesPlaceholder: { color: Colors.textMuted, fontStyle: 'italic' },
   notesInput: {
-    marginTop: 8,
-    fontSize: 13,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 10,
+    marginTop: Spacing.sm,
+    fontSize: FontSize.sm,
+    color: Colors.text,
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.textMuted,
     minHeight: 40,
     textAlignVertical: 'top',
   },
-  routeRow: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0', alignItems: 'center' },
-  routeIcon: { fontSize: 16, color: '#ccc' },
-  routeText: { fontSize: 12, color: '#888', marginTop: 4 },
-  deleteBtn: { alignSelf: 'flex-end' as const, marginTop: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, backgroundColor: '#FFE5E5' },
-  deleteText: { fontSize: 12, color: '#E74C3C', fontWeight: '500' as const },
+  routeRow: { marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.primaryLight, alignItems: 'center' },
+  routeIcon: { fontSize: FontSize.md, color: Colors.textMuted },
+  routeText: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: Spacing.xs },
+  deleteBtn: { alignSelf: 'flex-end', marginTop: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.sm, backgroundColor: Colors.primaryLight },
+  deleteText: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '500' },
 });
