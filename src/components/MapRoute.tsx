@@ -41,8 +41,9 @@ export default function MapRoute({ spots, routes }: Props) {
   return (
     <View style={styles.container}>
       <MapView
+        key={spots.map((s) => s.id).join('-')}
         style={styles.map}
-        region={region}
+        initialRegion={region}
       >
         {spots.map((spot, i) => (
           <Marker
