@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Spot, RouteSegment } from '../types/trip';
@@ -8,26 +9,39 @@ interface Props {
 }
 
 export default function MapRoute({ spots, routes }: Props) {
+  const mapRef = useRef<MapView>(null);
+
   if (spots.length === 0) {
     return (
       <View style={styles.fallback}>
-        <Text style={styles.fallbackText}>地图暂不可用</Text>
+        <Text style={styles.fallbackText}>添加景点后查看地图</Text>
       </View>
     );
   }
 
   const coordinates = spots.map((s) => ({ latitude: s.lat, longitude: s.lng }));
 
-  const region = {
-    latitude: spots[0].lat,
-    longitude: spots[0].lng,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  };
-
   return (
     <View style={styles.container}>
-      <MapView style={styles.map} initialRegion={region}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        initialRegion={{
+          latitude: spots[0].lat,
+          longitude: spots[0].lng,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+        onMapReady={() => {
+          if (coordinates.length >= 2) {
+            // Fit all markers in view with padding
+            mapRef.current?.fitToCoordinates(coordinates, {
+              edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+              animated: true,
+            });
+          }
+        }}
+      >
         {spots.map((spot, i) => (
           <Marker
             key={spot.id}
@@ -37,11 +51,13 @@ export default function MapRoute({ spots, routes }: Props) {
             pinColor={i === 0 ? '#4CAF50' : i === spots.length - 1 ? '#E74C3C' : '#4A90D9'}
           />
         ))}
-        <Polyline
-          coordinates={coordinates}
-          strokeWidth={3}
-          strokeColor="#4A90D9"
-        />
+        {coordinates.length >= 2 && (
+          <Polyline
+            coordinates={coordinates}
+            strokeWidth={3}
+            strokeColor="#4A90D9"
+          />
+        )}
       </MapView>
     </View>
   );
