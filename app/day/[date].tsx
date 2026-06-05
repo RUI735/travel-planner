@@ -8,6 +8,7 @@ import { calculateAllRoutes, checkRouteOptimality, searchPOI, POIResult } from '
 import WeatherBanner from '../../src/components/WeatherBanner';
 import SpotCard from '../../src/components/SpotCard';
 import MapRoute from '../../src/components/MapRoute';
+import DraggableSpotList from '../../src/components/DraggableSpotList';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '../../src/theme';
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -23,6 +24,7 @@ export default function DayDetailScreen() {
   const updateDay = useTripStore((s) => s.updateDay);
   const addSpotToDay = useTripStore((s) => s.addSpot);
   const updateSpotNotes = useTripStore((s) => s.updateSpotNotes);
+  const reorderSpots = useTripStore((s) => s.reorderSpots);
   const [loading, setLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -162,29 +164,34 @@ export default function DayDetailScreen() {
       <View style={styles.spotsSection}>
         <Text style={styles.sectionTitle}>景点安排</Text>
         {sortedSpots.length > 0 ? (
-          sortedSpots.map((spot, idx) => (
-            <SpotCard
-              key={spot.id}
-              spot={spot}
-              index={idx}
-              route={
-                idx < sortedSpots.length - 1
-                  ? day.routes.find((r) => r.fromSpotId === spot.id)
-                  : undefined
-              }
-              isAffected={day.weatherAlert?.affectedSpotIds.includes(spot.id)}
-              isStudentTrip={currentTrip?.isStudent ?? false}
-              onNotesChange={(text) => updateSpotNotes(date, spot.id, text)}
-              onDelete={() => {
-                updateDay(date, (d) => ({
-                  ...d,
-                  spots: d.spots
-                    .filter((s) => s.id !== spot.id)
-                    .map((s, i) => ({ ...s, order: i + 1 })),
-                }));
-              }}
-            />
-          ))
+          <DraggableSpotList
+            items={sortedSpots}
+            onReorder={(ids) => reorderSpots(date, ids)}
+            renderItem={(item, idx, isDragging, dragTrigger) => (
+              <SpotCard
+                spot={item}
+                index={idx}
+                route={
+                  idx < sortedSpots.length - 1
+                    ? day.routes.find((r) => r.fromSpotId === item.id)
+                    : undefined
+                }
+                isAffected={day.weatherAlert?.affectedSpotIds.includes(item.id)}
+                isStudentTrip={currentTrip?.isStudent ?? false}
+                dragHandlers={dragTrigger.panHandlers}
+                isActive={isDragging}
+                onNotesChange={(text) => updateSpotNotes(date, item.id, text)}
+                onDelete={() => {
+                  updateDay(date, (d) => ({
+                    ...d,
+                    spots: d.spots
+                      .filter((s) => s.id !== item.id)
+                      .map((s, i) => ({ ...s, order: i + 1 })),
+                  }));
+                }}
+              />
+            )}
+          />
         ) : (
           <View style={styles.emptySpots}>
             <Text style={styles.emptySpotsIcon}>📍</Text>

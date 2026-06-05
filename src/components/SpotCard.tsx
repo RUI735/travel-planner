@@ -11,6 +11,7 @@ interface Props {
   isAffected?: boolean;
   onDelete?: () => void;
   drag?: () => void;
+  dragHandlers?: any;
   isActive?: boolean;
   onNotesChange?: (text: string) => void;
   isStudentTrip?: boolean;
@@ -23,6 +24,7 @@ export default function SpotCard({
   isAffected,
   onDelete,
   drag,
+  dragHandlers,
   isActive,
   onNotesChange,
   isStudentTrip,
@@ -50,14 +52,20 @@ export default function SpotCard({
     <View style={[styles.card, isAffected && styles.cardAffected, isActive && styles.cardActive]}>
       <View style={styles.header}>
         {/* 拖拽手柄 */}
-        {drag && (
-          <TouchableOpacity
-            onLongPress={drag}
-            delayLongPress={150}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.dragHandle}>≡</Text>
-          </TouchableOpacity>
+        {(drag || dragHandlers) && (
+          dragHandlers ? (
+            <View {...dragHandlers} style={styles.dragHandleArea}>
+              <Text style={styles.dragHandle}>≡</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onLongPress={drag}
+              delayLongPress={150}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.dragHandle}>≡</Text>
+            </TouchableOpacity>
+          )
         )}
 
         <View style={styles.orderBadge}>
@@ -129,6 +137,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.03 }],
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  dragHandleArea: { padding: 4 },
   dragHandle: {
     fontSize: 20,
     color: Colors.textMuted,
