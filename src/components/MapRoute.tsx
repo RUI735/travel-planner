@@ -8,19 +8,6 @@ interface Props {
   routes: unknown[];
 }
 
-function bearing(from: { lat: number; lng: number }, to: { lat: number; lng: number }): number {
-  const dLng = ((to.lng - from.lng) * Math.PI) / 180;
-  const lat1 = (from.lat * Math.PI) / 180;
-  const lat2 = (to.lat * Math.PI) / 180;
-  const y = Math.sin(dLng) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-  return (Math.atan2(y, x) * 180) / Math.PI;
-}
-
-function midpoint(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  return { latitude: (a.lat + b.lat) / 2, longitude: (a.lng + b.lng) / 2 };
-}
-
 function getRegion(points: { lat: number; lng: number }[]) {
   const lats = points.map((p) => p.lat);
   const lngs = points.map((p) => p.lng);
@@ -65,16 +52,6 @@ export default function MapRoute({ spots, hotel }: Props) {
       ]
     : [];
 
-  // Arrow markers for onward route
-  const arrows = [];
-  for (let i = 0; i < onwardPath.length - 1; i++) {
-    const a = onwardPath[i];
-    const b = onwardPath[i + 1];
-    const mid = midpoint(a, b);
-    const angle = bearing(a, b);
-    arrows.push({ ...mid, angle, key: `arrow-${i}` });
-  }
-
   // Key to force remount on order change
   const mapKey = allPoints.map((p) => `${p.lat},${p.lng}`).join('|');
 
@@ -99,22 +76,6 @@ export default function MapRoute({ spots, hotel }: Props) {
             lineDashPattern={[8, 6]}
           />
         )}
-
-        {/* Direction arrows on onward route */}
-        {arrows.map((a) => (
-          <Marker
-            key={a.key}
-            coordinate={{ latitude: a.latitude, longitude: a.longitude }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            rotation={a.angle}
-            flat
-            tracksViewChanges={false}
-          >
-            <View style={styles.arrowBox}>
-              <Text style={styles.arrowText}>▶</Text>
-            </View>
-          </Marker>
-        ))}
 
         {/* Hotel marker */}
         {hotel && (
@@ -180,11 +141,4 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 2,
   },
   spotLabel: { fontSize: 10, fontWeight: '600', color: '#333', maxWidth: 80 },
-  // Arrows
-  arrowBox: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(255,107,107,0.85)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  arrowText: { fontSize: 12, color: '#fff' },
 });
