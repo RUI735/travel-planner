@@ -1,4 +1,3 @@
-import { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Spot, RouteSegment } from '../types/trip';
@@ -8,22 +7,26 @@ interface Props {
   routes: RouteSegment[];
 }
 
+function getRegion(spots: Spot[]) {
+  const lats = spots.map((s) => s.lat);
+  const lngs = spots.map((s) => s.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+
+  const latDelta = Math.max((maxLat - minLat) * 1.4, 0.01);
+  const lngDelta = Math.max((maxLng - minLng) * 1.4, 0.01);
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: latDelta,
+    longitudeDelta: lngDelta,
+  };
+}
+
 export default function MapRoute({ spots, routes }: Props) {
-  const mapRef = useRef<MapView>(null);
-  const coordinates = spots.map((s) => ({ latitude: s.lat, longitude: s.lng }));
-
-  // Re-fit map whenever spots change (incl. after reorder)
-  useEffect(() => {
-    if (coordinates.length >= 2 && mapRef.current) {
-      setTimeout(() => {
-        mapRef.current?.fitToCoordinates(coordinates, {
-          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-          animated: true,
-        });
-      }, 300);
-    }
-  }, [spots]);
-
   if (spots.length === 0) {
     return (
       <View style={styles.fallback}>
@@ -32,17 +35,14 @@ export default function MapRoute({ spots, routes }: Props) {
     );
   }
 
+  const coordinates = spots.map((s) => ({ latitude: s.lat, longitude: s.lng }));
+  const region = getRegion(spots);
+
   return (
     <View style={styles.container}>
       <MapView
-        ref={mapRef}
         style={styles.map}
-        initialRegion={{
-          latitude: spots[0].lat,
-          longitude: spots[0].lng,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
+        region={region}
       >
         {spots.map((spot, i) => (
           <Marker
