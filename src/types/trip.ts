@@ -73,6 +73,12 @@ export interface Day {
   structuredBudget: DayBudget | null;
 }
 
+export interface Hotel {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export interface Trip {
   id: string;
   destination: string;
@@ -82,6 +88,7 @@ export interface Trip {
   isStudent: boolean;
   partySize: number;
   budgetTier: string | null;
+  hotel: Hotel | null;
   days: Day[];
   createdAt: string;
   updatedAt: string;

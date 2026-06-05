@@ -32,8 +32,18 @@ export default function DayDetailScreen() {
   const destination = currentTrip?.destination ?? '';
   const router = useRouter();
 
+  const hotel = currentTrip?.hotel;
+  const hotelSpot: Spot | null = hotel
+    ? { id: '__hotel__', name: hotel.name, lat: hotel.lat, lng: hotel.lng, order: 0, reminders: [], notes: '' }
+    : null;
+
   async function recalcRoutes(spots: Spot[]) {
-    if (spots.length >= 2) {
+    if (hotelSpot && spots.length >= 1) {
+      const allPoints = [hotelSpot, ...spots, hotelSpot];
+      const routes = await calculateAllRoutes(allPoints);
+      const checked = checkRouteOptimality(routes);
+      updateDay(date, (d) => ({ ...d, routes: checked }));
+    } else if (spots.length >= 2) {
       const routes = await calculateAllRoutes(spots);
       const checked = checkRouteOptimality(routes);
       updateDay(date, (d) => ({ ...d, routes: checked }));
@@ -100,10 +110,15 @@ export default function DayDetailScreen() {
           updateDay(day!.date, (d) => ({ ...d, weather, weatherAlert: alert }));
         }
 
-        if (day!.spots.length >= 2) {
-          const routes = await calculateAllRoutes(day!.spots);
-          const checked = checkRouteOptimality(routes);
-          updateDay(day!.date, (d) => ({ ...d, routes: checked }));
+        if (day!.spots.length >= 1) {
+          const allPoints = hotelSpot
+            ? [hotelSpot, ...day!.spots, hotelSpot]
+            : day!.spots;
+          if (allPoints.length >= 2) {
+            const routes = await calculateAllRoutes(allPoints);
+            const checked = checkRouteOptimality(routes);
+            updateDay(day!.date, (d) => ({ ...d, routes: checked }));
+          }
         }
       } catch {
         // Weather/map failure is non-blocking
@@ -172,7 +187,25 @@ export default function DayDetailScreen() {
       <View style={styles.spotsSection}>
         <Text style={styles.sectionTitle}>景点安排</Text>
         {sortedSpots.length > 0 ? (
-          sortedSpots.map((spot, idx) => (
+          <>
+            {/* Hotel → First Spot */}
+            {hotel && day.routes.length > 0 && (() => {
+              const hotelRoute = day.routes.find((r) => r.fromSpotId === '__hotel__');
+              if (!hotelRoute) return null;
+              return (
+                <View style={styles.hotelLeg}>
+                  <Text style={styles.hotelLegIcon}>🏨</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.hotelLegName}>{hotel.name}</Text>
+                    <Text style={styles.hotelLegRoute}>
+                      🚗 约 {hotelRoute.driveMinutes} 分钟 · 🚌 约 {hotelRoute.transitMinutes} 分钟 · {hotelRoute.distanceKm} km
+                    </Text>
+                  </View>
+                  <Text style={styles.hotelLegArrow}>↓</Text>
+                </View>
+              );
+            })()}
+            {sortedSpots.map((spot, idx) => (
             <SpotCard
               key={spot.id}
               spot={spot}
@@ -208,7 +241,25 @@ export default function DayDetailScreen() {
                 recalcRoutes(remaining);
               }}
             />
-          ))
+            ))}
+            {/* Last Spot → Hotel */}
+            {hotel && day.routes.length > 0 && (() => {
+              const returnRoute = day.routes.find((r) => r.toSpotId === '__hotel__');
+              if (!returnRoute) return null;
+              return (
+                <View style={styles.hotelLeg}>
+                  <Text style={styles.hotelLegArrow}>↓</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.hotelLegName}>{hotel.name}</Text>
+                    <Text style={styles.hotelLegRoute}>
+                      🚗 约 {returnRoute.driveMinutes} 分钟 · 🚌 约 {returnRoute.transitMinutes} 分钟 · {returnRoute.distanceKm} km
+                    </Text>
+                  </View>
+                  <Text style={styles.hotelLegIcon}>🏨</Text>
+                </View>
+              );
+            })()}
+          </>
         ) : (
           <View style={styles.emptySpots}>
             <Text style={styles.emptySpotsIcon}>📍</Text>
@@ -347,4 +398,9 @@ const styles = StyleSheet.create({
   emptySpotsIcon: { fontSize: 48 },
   emptySpotsTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textSecondary },
   emptySpotsHint: { fontSize: FontSize.sm, color: Colors.textMuted },
+  hotelLeg: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, backgroundColor: Colors.white, borderRadius: Radius.lg, gap: Spacing.sm },
+  hotelLegIcon: { fontSize: 20 },
+  hotelLegArrow: { fontSize: 16, color: Colors.textMuted, alignSelf: 'center' },
+  hotelLegName: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
+  hotelLegRoute: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
 });

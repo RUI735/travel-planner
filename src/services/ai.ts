@@ -163,6 +163,7 @@ Max ${input.maxSpotsPerDay} spots per day.`;
     isStudent: input.isStudent,
     partySize: input.partySize,
     budgetTier: input.budgetTier,
+    hotel: null,
     days: tripDays,
   };
 }

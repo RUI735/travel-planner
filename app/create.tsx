@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useTripStore } from '../src/store/useTripStore';
 import { generateTrip } from '../src/services/ai';
-import { Trip } from '../src/types/trip';
+import { Trip, Hotel } from '../src/types/trip';
+import { searchPOI, POIResult } from '../src/services/map';
 import LoadingOverlay from '../src/components/LoadingOverlay';
 import { Colors, FontSize, Radius, Spacing } from '../src/theme';
 
@@ -28,6 +29,11 @@ export default function CreateScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [showHotelSearch, setShowHotelSearch] = useState(false);
+  const [hotelQuery, setHotelQuery] = useState('');
+  const [hotelResults, setHotelResults] = useState<POIResult[]>([]);
+  const [searchingHotel, setSearchingHotel] = useState(false);
 
   const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -79,6 +85,15 @@ export default function CreateScreen() {
     );
   };
 
+  async function handleHotelSearch(text: string) {
+    setHotelQuery(text);
+    if (text.trim().length < 2) { setHotelResults([]); return; }
+    setSearchingHotel(true);
+    const results = await searchPOI(text.trim(), destination || '酒店');
+    setHotelResults(results);
+    setSearchingHotel(false);
+  }
+
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!destination.trim()) e.destination = '请输入目的地';
@@ -119,6 +134,7 @@ export default function CreateScreen() {
         isStudent: student,
         partySize,
         budgetTier,
+        hotel,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -272,6 +288,61 @@ export default function CreateScreen() {
           ))}
         </View>
 
+        <Text style={styles.label}>住宿位置（可选）</Text>
+        {hotel ? (
+          <View style={styles.hotelRow}>
+            <Text style={styles.hotelName}>🏨 {hotel.name}</Text>
+            <TouchableOpacity onPress={() => { setHotel(null); setHotelQuery(''); }}>
+              <Text style={styles.hotelRemove}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        ) : showHotelSearch ? (
+          <View style={styles.searchBox}>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="搜索酒店名称..."
+                placeholderTextColor={Colors.textMuted}
+                value={hotelQuery}
+                onChangeText={handleHotelSearch}
+                autoFocus
+              />
+              <TouchableOpacity onPress={() => { setShowHotelSearch(false); setHotelQuery(''); setHotelResults([]); }}>
+                <Text style={styles.cancelText}>取消</Text>
+              </TouchableOpacity>
+            </View>
+            {searchingHotel && <ActivityIndicator size="small" color={Colors.primary} style={{ padding: 12 }} />}
+            {hotelResults.map((poi, i) => (
+              <TouchableOpacity
+                key={`${poi.name}-${i}`}
+                style={styles.resultRow}
+                onPress={() => {
+                  setHotel({ name: poi.name, lat: poi.lat, lng: poi.lng });
+                  setShowHotelSearch(false);
+                  setHotelQuery('');
+                  setHotelResults([]);
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.resultName}>{poi.name}</Text>
+                  <Text style={styles.resultAddr} numberOfLines={1}>{poi.address}</Text>
+                </View>
+                <Text style={styles.resultAdd}>+</Text>
+              </TouchableOpacity>
+            ))}
+            {!searchingHotel && hotelQuery.length >= 2 && hotelResults.length === 0 && (
+              <Text style={styles.noResult}>未找到，换个关键词试试</Text>
+            )}
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.hotelInput}
+            onPress={() => setShowHotelSearch(true)}
+          >
+            <Text style={styles.hotelPlaceholder}>🔍 搜索酒店...</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[styles.generateBtn, status === 'generating' && styles.generateBtnDisabled]}
           onPress={handleGenerate}
@@ -364,4 +435,18 @@ const styles = StyleSheet.create({
   partyUnit: { fontSize: FontSize.sm, color: Colors.textSecondary },
   skipChipActive: { borderColor: Colors.textSecondary, backgroundColor: '#f0f0f0' },
   skipTextActive: { color: Colors.textSecondary, fontWeight: '600' as const },
+  hotelInput: { borderWidth: 1, borderColor: Colors.textMuted, borderRadius: Radius.md, padding: Spacing.md, backgroundColor: Colors.white },
+  hotelPlaceholder: { fontSize: FontSize.md, color: Colors.textMuted },
+  hotelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: Colors.textMuted, borderRadius: Radius.md, padding: Spacing.md, backgroundColor: Colors.white },
+  hotelName: { fontSize: FontSize.md, color: Colors.text, flex: 1 },
+  hotelRemove: { fontSize: 18, color: Colors.textMuted, paddingLeft: Spacing.sm },
+  searchBox: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.primaryLight },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  searchInput: { flex: 1, borderWidth: 1, borderColor: Colors.textMuted, borderRadius: Radius.md, padding: 10, fontSize: FontSize.sm, backgroundColor: Colors.surfaceAlt },
+  cancelText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '500' as const },
+  resultRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.primaryLight, gap: Spacing.sm },
+  resultName: { fontSize: FontSize.md, fontWeight: '500' as const, color: Colors.text },
+  resultAddr: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  resultAdd: { width: 28, height: 28, borderRadius: Radius.full, backgroundColor: Colors.primary, color: Colors.white, textAlign: 'center', lineHeight: 28, fontSize: 18, fontWeight: '600' as const, overflow: 'hidden' },
+  noResult: { padding: Spacing.md, textAlign: 'center', color: Colors.textSecondary, fontSize: FontSize.sm },
 });
