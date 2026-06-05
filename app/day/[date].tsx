@@ -178,7 +178,7 @@ export default function DayDetailScreen() {
       )}
 
       {day.spots.length > 0 && (
-        <MapRoute spots={sortedSpots} routes={day.routes} />
+        <MapRoute spots={sortedSpots} hotel={hotel ?? null} routes={day.routes} />
       )}
 
       {day.budgetNote && (
