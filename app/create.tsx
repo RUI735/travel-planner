@@ -212,24 +212,26 @@ export default function CreateScreen() {
 
         <Text style={styles.label}>出行人数</Text>
         <View style={styles.partyRow}>
-          <TouchableOpacity
-            style={[styles.partyBtn, partySize <= 1 && styles.partyBtnDisabled]}
-            onPress={() => setPartySize((n) => Math.max(1, n - 1))}
-            disabled={partySize <= 1}
-          >
-            <Text style={[styles.partyBtnText, partySize <= 1 && styles.partyBtnTextDisabled]}>−</Text>
-          </TouchableOpacity>
           <View style={styles.partyValue}>
             <Text style={styles.partyNumber}>{partySize}</Text>
             <Text style={styles.partyUnit}>人</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.partyBtn, partySize >= 20 && styles.partyBtnDisabled]}
-            onPress={() => setPartySize((n) => Math.min(20, n + 1))}
-            disabled={partySize >= 20}
-          >
-            <Text style={[styles.partyBtnText, partySize >= 20 && styles.partyBtnTextDisabled]}>+</Text>
-          </TouchableOpacity>
+          <View style={styles.partyBtns}>
+            <TouchableOpacity
+              style={[styles.partyBtn, partySize <= 1 && styles.partyBtnDisabled]}
+              onPress={() => setPartySize((n) => Math.max(1, n - 1))}
+              disabled={partySize <= 1}
+            >
+              <Text style={[styles.partyBtnText, partySize <= 1 && styles.partyBtnTextDisabled]}>−</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.partyBtn, partySize >= 20 && styles.partyBtnDisabled]}
+              onPress={() => setPartySize((n) => Math.min(20, n + 1))}
+              disabled={partySize >= 20}
+            >
+              <Text style={[styles.partyBtnText, partySize >= 20 && styles.partyBtnTextDisabled]}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.label}>预算档位（可选）</Text>
@@ -341,31 +343,25 @@ const styles = StyleSheet.create({
   pickerDoneText: { color: Colors.primary, fontSize: FontSize.md, fontWeight: '600' },
   partyRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xxl,
-    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.textMuted,
+    borderRadius: Radius.md,
+    padding: 10,
+    backgroundColor: Colors.white,
   },
+  partyBtns: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   partyBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 36, height: 36, borderRadius: Radius.full,
+    backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center',
   },
   partyBtnDisabled: { backgroundColor: Colors.textMuted },
-  partyBtnText: { fontSize: FontSize.xxl, color: Colors.white, fontWeight: '300' },
-  partyBtnTextDisabled: { color: Colors.textMuted },
-  partyValue: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: Spacing.xs,
-    minWidth: 56,
-    justifyContent: 'center',
-  },
-  partyNumber: { fontSize: FontSize.xxxl, fontWeight: '700', color: Colors.text },
-  partyUnit: { fontSize: 16, color: Colors.textSecondary },
+  partyBtnText: { fontSize: FontSize.xl, color: Colors.white, fontWeight: '400', lineHeight: 22 },
+  partyBtnTextDisabled: { color: Colors.white },
+  partyValue: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.xs },
+  partyNumber: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
+  partyUnit: { fontSize: FontSize.sm, color: Colors.textSecondary },
   skipChipActive: { borderColor: Colors.textSecondary, backgroundColor: '#f0f0f0' },
   skipTextActive: { color: Colors.textSecondary, fontWeight: '600' as const },
 });
