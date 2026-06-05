@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Day } from '../types/trip';
 import { aggregateBudgets } from '../services/budget';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '../theme';
 
 // Android 需要手动启用 LayoutAnimation
 if (
@@ -103,16 +104,12 @@ export default function BudgetSummary({ days, partySize }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: Colors.budgetBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    ...Shadow.card,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -120,47 +117,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryText: {
-    fontSize: 14,
+    fontSize: FontSize.sm,
     fontWeight: '600',
-    color: '#5D4E37',
+    color: Colors.budgetText,
     flex: 1,
   },
   chevron: {
-    fontSize: 12,
-    color: '#A68A3C',
-    marginLeft: 8,
+    fontSize: FontSize.xs,
+    color: Colors.budgetAccent,
+    marginLeft: Spacing.sm,
   },
   detailSection: {
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E8D5A3',
-    marginVertical: 10,
+    backgroundColor: Colors.warning,
+    marginVertical: Spacing.sm,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
   },
   detailLabel: {
-    fontSize: 13,
-    color: '#6B5E4A',
+    fontSize: FontSize.sm,
+    color: Colors.budgetText,
   },
   detailValue: {
-    fontSize: 13,
-    color: '#5D4E37',
+    fontSize: FontSize.sm,
+    color: Colors.budgetText,
     fontWeight: '500',
   },
   totalLabel: {
-    fontSize: 14,
-    color: '#5D4E37',
+    fontSize: FontSize.sm,
+    color: Colors.budgetText,
     fontWeight: '600',
   },
   totalValue: {
-    fontSize: 14,
-    color: '#C77D20',
+    fontSize: FontSize.sm,
+    color: Colors.budgetAccent,
     fontWeight: '700',
   },
 });
