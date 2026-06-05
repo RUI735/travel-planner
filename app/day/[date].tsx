@@ -32,6 +32,16 @@ export default function DayDetailScreen() {
   const destination = currentTrip?.destination ?? '';
   const router = useRouter();
 
+  async function recalcRoutes(spots: Spot[]) {
+    if (spots.length >= 2) {
+      const routes = await calculateAllRoutes(spots);
+      const checked = checkRouteOptimality(routes);
+      updateDay(date, (d) => ({ ...d, routes: checked }));
+    } else {
+      updateDay(date, (d) => ({ ...d, routes: [] }));
+    }
+  }
+
   async function handleSearch(text: string) {
     setSearchQuery(text);
     if (text.trim().length < 2) {
@@ -179,19 +189,23 @@ export default function DayDetailScreen() {
                 const ids = sortedSpots.map((s) => s.id);
                 [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
                 reorderSpots(date, ids);
+                const reordered = ids.map((id) => sortedSpots.find((s) => s.id === id)!).filter(Boolean);
+                recalcRoutes(reordered);
               } : undefined}
               onMoveDown={idx < sortedSpots.length - 1 ? () => {
                 const ids = sortedSpots.map((s) => s.id);
                 [ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
                 reorderSpots(date, ids);
+                const reordered = ids.map((id) => sortedSpots.find((s) => s.id === id)!).filter(Boolean);
+                recalcRoutes(reordered);
               } : undefined}
               onDelete={() => {
+                const remaining = sortedSpots.filter((s) => s.id !== spot.id);
                 updateDay(date, (d) => ({
                   ...d,
-                  spots: d.spots
-                    .filter((s) => s.id !== spot.id)
-                    .map((s, i) => ({ ...s, order: i + 1 })),
+                  spots: remaining.map((s, i) => ({ ...s, order: i + 1 })),
                 }));
+                recalcRoutes(remaining);
               }}
             />
           ))
