@@ -24,7 +24,9 @@ export default function WeatherBanner({ weather, alert }: Props) {
       <View style={styles.mainRow}>
         <Text style={styles.conditionLabel}>{WEATHER_LABELS[weather.condition] ?? weather.condition}</Text>
         <Text style={styles.tempRange}>
-          {noForecast ? `暂无预报 (${weather.lowTemp}/${weather.highTemp})` : `${weather.lowTemp}° / ${weather.highTemp}°`}
+          {noForecast
+            ? `暂无预报 [可用:${weather.fetchedAt}]`
+            : `${weather.lowTemp}° / ${weather.highTemp}°`}
         </Text>
       </View>
       {!noForecast && weather.precipitation > 0 && (

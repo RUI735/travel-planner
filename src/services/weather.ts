@@ -128,14 +128,15 @@ export async function fetchWeather(
     const forecast = data.daily.find((d: any) => d.fxDate === targetDate);
 
     if (!forecast) {
-      // Beyond 7-day forecast range
+      const dates = data.daily.map((d: any) => d.fxDate).join(',');
+      // Beyond 7-day forecast range — show first available date for debugging
       return {
         condition: 'sunny',
         highTemp: -999,
-        lowTemp: -999,
-        precipitation: 0,
+        lowTemp: data.daily[0] ? parseInt(data.daily[0].tempMin ?? '0', 10) : -999,
+        precipitation: data.daily.length,
         alertLevel: 'none',
-        fetchedAt: new Date().toISOString(),
+        fetchedAt: dates, // reuse field for debug: show available date range
       };
     }
 
