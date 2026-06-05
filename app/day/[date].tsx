@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTripStore } from '../../src/store/useTripStore';
@@ -30,6 +30,7 @@ export default function DayDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<POIResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const destination = currentTrip?.destination ?? '';
   const router = useRouter();
@@ -118,7 +119,7 @@ export default function DayDetailScreen() {
   const sortedSpots = [...day.spots].sort((a, b) => a.order - b.order);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} scrollEnabled={!isDragging}>
       <View style={styles.dayNav}>
         {prevDate ? (
           <TouchableOpacity onPress={() => router.replace(`/day/${prevDate}`)}>
@@ -167,6 +168,7 @@ export default function DayDetailScreen() {
           <DraggableSpotList
             items={sortedSpots}
             onReorder={(ids) => reorderSpots(date, ids)}
+            onDragActive={setIsDragging}
             renderItem={(item, idx, isDragging, dragTrigger) => (
               <SpotCard
                 spot={item}

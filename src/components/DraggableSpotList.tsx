@@ -11,6 +11,7 @@ interface SpotLike {
 interface Props<T extends SpotLike> {
   items: T[];
   onReorder: (ids: string[]) => void;
+  onDragActive?: (active: boolean) => void;
   renderItem: (
     item: T,
     index: number,
@@ -22,6 +23,7 @@ interface Props<T extends SpotLike> {
 export default function DraggableSpotList<T extends SpotLike>({
   items,
   onReorder,
+  onDragActive,
   renderItem,
 }: Props<T>) {
   const [dragging, setDragging] = useState(-1);
@@ -32,7 +34,9 @@ export default function DraggableSpotList<T extends SpotLike>({
 
   const draggingRef = useRef(-1);
   const orderRef = useRef<string[]>([]);
+  const onDragActiveRef = useRef(onDragActive);
   draggingRef.current = dragging;
+  onDragActiveRef.current = onDragActive;
 
   const currentOrder = order.length === items.length ? order : items.map((it) => it.id);
   orderRef.current = currentOrder;
@@ -58,6 +62,7 @@ export default function DraggableSpotList<T extends SpotLike>({
       setOrder([]);
       dragY.setValue(0);
       hasMoved.current = false;
+      onDragActiveRef.current?.(false);
     });
   }, [dragY, items.length, onReorder]);
 
@@ -76,6 +81,7 @@ export default function DraggableSpotList<T extends SpotLike>({
           longPressTimer = setTimeout(() => {
             active = true;
             setDragging(idx);
+            onDragActiveRef.current?.(true);
             dragY.setValue(0);
 
             if (order.length === 0) {
@@ -150,6 +156,7 @@ export default function DraggableSpotList<T extends SpotLike>({
             dragY.setValue(0);
             setDragging(-1);
             setOrder([]);
+            onDragActiveRef.current?.(false);
           }
           active = false;
         },
