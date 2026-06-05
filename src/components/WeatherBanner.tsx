@@ -17,17 +17,22 @@ const WEATHER_LABELS: Record<string, string> = {
 export default function WeatherBanner({ weather, alert }: Props) {
   const isBad = alert !== null && alert.level === 'red';
   const isMild = alert !== null && alert.level === 'yellow';
+  const noForecast = weather.highTemp === -999;
 
   return (
     <View style={[styles.banner, isBad ? styles.bannerRed : isMild ? styles.bannerYellow : styles.bannerNormal]}>
       <View style={styles.mainRow}>
         <Text style={styles.conditionLabel}>{WEATHER_LABELS[weather.condition] ?? weather.condition}</Text>
-        <Text style={styles.tempRange}>{weather.lowTemp}° / {weather.highTemp}°</Text>
+        <Text style={styles.tempRange}>
+          {noForecast ? `暂无预报 (${weather.lowTemp}/${weather.highTemp})` : `${weather.lowTemp}° / ${weather.highTemp}°`}
+        </Text>
       </View>
-      {weather.precipitation > 0 && (
+      {!noForecast && weather.precipitation > 0 && (
         <Text style={styles.detail}>降水概率 {weather.precipitation}%</Text>
       )}
-      <Text style={styles.hint}>{getWeatherHint(weather)}</Text>
+      {!noForecast && (
+        <Text style={styles.hint}>{getWeatherHint(weather)}</Text>
+      )}
       {alert && (
         <View style={styles.alertBox}>
           <Text style={styles.alertReason}>{alert.reason}</Text>
