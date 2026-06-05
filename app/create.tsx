@@ -8,7 +8,7 @@ import { Trip } from '../src/types/trip';
 import LoadingOverlay from '../src/components/LoadingOverlay';
 import { Colors, FontSize, Radius, Spacing } from '../src/theme';
 
-const PREFERENCES = ['美食', '人文', '自然', '打卡拍照', '悠闲', '学生优惠'];
+const PREFERENCES = ['美食', '人文', '自然', '打卡拍照', '悠闲', '学生优惠', '购物', '夜生活', '小众秘境', '历史古迹', '户外运动', '文艺展览'];
 const BUDGET_TIERS = [
   { key: 'economy', label: '💰 经济' },
   { key: 'comfort', label: '💵 舒适' },
@@ -255,14 +255,13 @@ export default function CreateScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>偏好（可选，最多3个）  已选{selectedPrefs.length}/3</Text>
+        <Text style={styles.label}>偏好（可选）</Text>
         <View style={styles.prefRow}>
           {PREFERENCES.map((pref) => (
             <TouchableOpacity
               key={pref}
               style={[styles.prefChip, selectedPrefs.includes(pref) && styles.prefChipActive]}
               onPress={() => togglePref(pref)}
-              disabled={!selectedPrefs.includes(pref) && selectedPrefs.length >= 3}
             >
               <Text style={[styles.prefText, selectedPrefs.includes(pref) && styles.prefTextActive]}>
                 {pref}
