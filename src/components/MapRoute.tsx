@@ -10,6 +10,19 @@ interface Props {
 
 export default function MapRoute({ spots, routes }: Props) {
   const mapRef = useRef<MapView>(null);
+  const coordinates = spots.map((s) => ({ latitude: s.lat, longitude: s.lng }));
+
+  // Re-fit map whenever spots change (incl. after reorder)
+  useEffect(() => {
+    if (coordinates.length >= 2 && mapRef.current) {
+      setTimeout(() => {
+        mapRef.current?.fitToCoordinates(coordinates, {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }, 300);
+    }
+  }, [spots]);
 
   if (spots.length === 0) {
     return (
@@ -18,8 +31,6 @@ export default function MapRoute({ spots, routes }: Props) {
       </View>
     );
   }
-
-  const coordinates = spots.map((s) => ({ latitude: s.lat, longitude: s.lng }));
 
   return (
     <View style={styles.container}>
@@ -31,15 +42,6 @@ export default function MapRoute({ spots, routes }: Props) {
           longitude: spots[0].lng,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
-        }}
-        onMapReady={() => {
-          if (coordinates.length >= 2) {
-            // Fit all markers in view with padding
-            mapRef.current?.fitToCoordinates(coordinates, {
-              edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-              animated: true,
-            });
-          }
         }}
       >
         {spots.map((spot, i) => (
