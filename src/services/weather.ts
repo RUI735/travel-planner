@@ -111,7 +111,7 @@ export async function fetchWeather(
   try {
     const locationId = await getLocationId(cityName ?? '', lat, lng);
     if (!locationId) {
-      throw new Error('Failed to resolve city location');
+      throw new Error(`city:${cityName || 'none'} key:${API_KEY ? 'OK' : 'EMPTY'}`);
     }
 
     const url = `${WEATHER_BASE}/7d?location=${locationId}&key=${API_KEY}`;
