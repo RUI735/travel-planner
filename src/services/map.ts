@@ -108,11 +108,11 @@ export async function calculateRoute(
 }
 
 export async function calculateAllRoutes(spots: Spot[]): Promise<RouteSegment[]> {
-  const sorted = [...spots].sort((a, b) => a.order - b.order);
+  // Use caller's order — don't re-sort here. Callers already pass spots in the desired sequence.
   const routes: RouteSegment[] = [];
 
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const segment = await calculateRoute(sorted[i], sorted[i + 1]);
+  for (let i = 0; i < spots.length - 1; i++) {
+    const segment = await calculateRoute(spots[i], spots[i + 1]);
     if (segment) {
       segment.isOptimal = true;
       routes.push(segment);
