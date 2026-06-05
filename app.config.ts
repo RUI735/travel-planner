@@ -5,5 +5,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
     amapApiKey: process.env.AMAP_API_KEY ?? '',
+    qweatherApiKey: process.env.QWEATHER_API_KEY ?? '',
   },
 } as ExpoConfig);

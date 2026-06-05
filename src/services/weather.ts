@@ -2,44 +2,72 @@
 import { Weather, WeatherCondition, WeatherAlert, Spot } from '../types/trip';
 import Constants from 'expo-constants';
 
-const API_KEY = Constants.expoConfig?.extra?.amapApiKey ?? '';
-const AMAP_BASE = 'https://restapi.amap.com/v3';
+const API_KEY = Constants.expoConfig?.extra?.qweatherApiKey ?? '';
+const GEO_BASE = 'https://geoapi.qweather.com/v2';
+const WEATHER_BASE = 'https://devapi.qweather.com/v7/weather';
 
-// Map Amap Chinese weather text to WeatherCondition
+// Map QWeather icon codes to WeatherCondition
 const CONDITION_MAP: Record<string, WeatherCondition> = {
-  晴: 'sunny',
-  多云: 'cloudy',
-  少云: 'cloudy',
-  晴间多云: 'cloudy',
-  阴: 'overcast',
-  小雨: 'light_rain',
-  小到中雨: 'moderate_rain',
-  中雨: 'moderate_rain',
-  中到大雨: 'heavy_rain',
-  大雨: 'heavy_rain',
-  大到暴雨: 'heavy_rain',
-  暴雨: 'heavy_rain',
-  大暴雨: 'heavy_rain',
-  特大暴雨: 'heavy_rain',
-  雷阵雨: 'heavy_rain',
-  雷阵雨伴有冰雹: 'heavy_rain',
-  阵雨: 'light_rain',
-  小雪: 'snow',
-  中雪: 'snow',
-  大雪: 'snow',
-  暴雪: 'snow',
-  雨夹雪: 'snow',
-  雾: 'fog',
-  霾: 'fog',
-  沙尘暴: 'typhoon',
-  浮尘: 'overcast',
-  扬沙: 'overcast',
-  台风: 'typhoon',
-  热带风暴: 'typhoon',
+  '100': 'sunny',       // 晴
+  '101': 'cloudy',      // 多云
+  '102': 'cloudy',      // 少云
+  '103': 'cloudy',      // 晴间多云
+  '104': 'overcast',    // 阴
+  '150': 'sunny',       // 夜晚晴
+  '151': 'cloudy',      // 夜晚多云
+  '152': 'cloudy',      // 夜晚少云
+  '153': 'cloudy',      // 夜晚晴间多云
+  '154': 'overcast',    // 夜晚阴
+  '300': 'light_rain',  // 阵雨
+  '301': 'light_rain',  // 强阵雨
+  '302': 'heavy_rain',  // 雷阵雨
+  '303': 'heavy_rain',  // 强雷阵雨
+  '304': 'heavy_rain',  // 雷阵雨伴有冰雹
+  '305': 'light_rain',  // 小雨
+  '306': 'moderate_rain', // 中雨
+  '307': 'heavy_rain',  // 大雨
+  '308': 'heavy_rain',  // 极端降雨
+  '309': 'light_rain',  // 毛毛雨/细雨
+  '310': 'heavy_rain',  // 暴雨
+  '311': 'heavy_rain',  // 大暴雨
+  '312': 'heavy_rain',  // 特大暴雨
+  '313': 'heavy_rain',  // 冻雨
+  '314': 'light_rain',  // 小到中雨
+  '315': 'moderate_rain', // 中到大雨
+  '316': 'heavy_rain',  // 大到暴雨
+  '317': 'heavy_rain',  // 暴雨到大暴雨
+  '318': 'heavy_rain',  // 大暴雨到特大暴雨
+  '399': 'light_rain',  // 雨
+  '400': 'snow',        // 小雪
+  '401': 'snow',        // 中雪
+  '402': 'snow',        // 大雪
+  '403': 'snow',        // 暴雪
+  '404': 'snow',        // 雨夹雪
+  '405': 'snow',        // 雨雪天气
+  '406': 'snow',        // 阵雨夹雪
+  '407': 'snow',        // 阵雪
+  '408': 'snow',        // 小到中雪
+  '409': 'snow',        // 中到大雪
+  '410': 'snow',        // 大到暴雪
+  '499': 'snow',        // 雪
+  '500': 'fog',         // 薄雾
+  '501': 'fog',         // 雾
+  '502': 'fog',         // 霾
+  '503': 'fog',         // 扬沙
+  '504': 'fog',         // 浮尘
+  '507': 'fog',         // 沙尘暴
+  '508': 'fog',         // 强沙尘暴
+  '509': 'fog',         // 浓雾
+  '510': 'fog',         // 强浓雾
+  '511': 'fog',         // 中度霾
+  '512': 'fog',         // 重度霾
+  '513': 'fog',         // 严重霾
+  '514': 'fog',         // 大雾
+  '515': 'fog',         // 特强浓雾
 };
 
-function mapCondition(amapWeather: string): WeatherCondition {
-  return CONDITION_MAP[amapWeather] ?? 'sunny';
+function mapCondition(iconCode: string): WeatherCondition {
+  return CONDITION_MAP[iconCode] ?? 'sunny';
 }
 
 function isBadWeather(condition: WeatherCondition): boolean {
@@ -50,14 +78,22 @@ function isMildBadWeather(condition: WeatherCondition): boolean {
   return ['light_rain', 'overcast', 'fog'].includes(condition);
 }
 
-// Step 1: convert lat/lng to adcode via Amap regeo API
-async function latLngToAdcode(lat: number, lng: number): Promise<string | null> {
+// Cache city location IDs to avoid repeated geocode calls
+const locationCache = new Map<string, string>();
+
+async function getLocationId(cityName: string, lat: number, lng: number): Promise<string | null> {
+  const cacheKey = cityName || `${lat},${lng}`;
+  if (locationCache.has(cacheKey)) return locationCache.get(cacheKey)!;
+
   try {
-    const url = `${AMAP_BASE}/geocode/regeo?key=${API_KEY}&location=${lng},${lat}`;
+    const query = cityName || `${lng},${lat}`;
+    const url = `${GEO_BASE}/city/lookup?location=${encodeURIComponent(query)}&key=${API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
-    if (data.status === '1' && data.regeocode?.addressComponent?.adcode) {
-      return data.regeocode.addressComponent.adcode;
+    if (data.code === '200' && data.location?.[0]?.id) {
+      const id = data.location[0].id;
+      locationCache.set(cacheKey, id);
+      return id;
     }
     return null;
   } catch {
@@ -65,52 +101,57 @@ async function latLngToAdcode(lat: number, lng: number): Promise<string | null> 
   }
 }
 
-export async function fetchWeather(lat: number, lng: number, date: string): Promise<Weather> {
+export async function fetchWeather(
+  lat: number,
+  lng: number,
+  date: string,
+  cityName?: string
+): Promise<Weather> {
   try {
-    // Convert lat/lng to adcode
-    const adcode = await latLngToAdcode(lat, lng);
-    if (!adcode) {
-      throw new Error('Failed to resolve location to city');
+    const locationId = await getLocationId(cityName ?? '', lat, lng);
+    if (!locationId) {
+      throw new Error('Failed to resolve city location');
     }
 
-    // Fetch weather forecast from Amap
-    const url = `${AMAP_BASE}/weather/weatherInfo?key=${API_KEY}&city=${adcode}&extensions=all`;
+    const url = `${WEATHER_BASE}/7d?location=${locationId}&key=${API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
 
-    if (data.status !== '1' || !data.forecasts?.[0]?.casts) {
-      throw new Error(`Weather API error: status=${data.status}`);
+    if (data.code !== '200' || !data.daily) {
+      throw new Error(`QWeather API error: code=${data.code}`);
     }
 
     const targetDate = date.split('T')[0];
-    const casts: any[] = data.forecasts[0].casts;
-    const forecast = casts.find((c: any) => c.date === targetDate);
+    const forecast = data.daily.find((d: any) => d.fxDate === targetDate);
 
     if (!forecast) {
-      throw new Error(`No forecast for date: ${date}`);
+      // Beyond 7-day forecast range
+      return {
+        condition: 'sunny',
+        highTemp: -999,
+        lowTemp: -999,
+        precipitation: 0,
+        alertLevel: 'none',
+        fetchedAt: new Date().toISOString(),
+      };
     }
 
-    // Use daytime weather text for condition mapping
-    const weatherText: string = forecast.dayweather ?? '晴';
-    const condition = mapCondition(weatherText);
-
-    // Estimate precipitation from weather type
-    const hasRain = weatherText.includes('雨') || weatherText.includes('雪');
-    const precipitation = hasRain ? 60 : 0;
+    const condition = mapCondition(forecast.iconDay ?? '100');
+    const precip = parseFloat(forecast.precip ?? '0');
 
     return {
       condition,
-      highTemp: parseInt(forecast.daytemp ?? '0', 10),
-      lowTemp: parseInt(forecast.nighttemp ?? '0', 10),
-      precipitation,
+      highTemp: parseInt(forecast.tempMax ?? '0', 10),
+      lowTemp: parseInt(forecast.tempMin ?? '0', 10),
+      precipitation: precip > 0 ? Math.round(precip) : 0,
       alertLevel: 'none',
       fetchedAt: new Date().toISOString(),
     };
   } catch {
     return {
       condition: 'sunny',
-      highTemp: 0,
-      lowTemp: 0,
+      highTemp: -999,
+      lowTemp: -999,
       precipitation: 0,
       alertLevel: 'none',
       fetchedAt: new Date().toISOString(),
@@ -130,8 +171,8 @@ export function checkWeatherAlert(weather: Weather, spots: Spot[]): WeatherAlert
   }
 
   if (isMildBadWeather(weather.condition)) {
-    const outdoorSpots = spots.filter((s) =>
-      !s.reminders.some((r) => r.type === 'openingHours')
+    const outdoorSpots = spots.filter(
+      (s) => !s.reminders.some((r) => r.type === 'openingHours')
     );
     return {
       level: 'yellow',
@@ -149,7 +190,6 @@ export function getWeatherHint(weather: Weather): string {
   const cond = weather.condition;
   const avgTemp = Math.round((weather.highTemp + weather.lowTemp) / 2);
 
-  // Temperature-based clothing advice
   if (avgTemp >= 32) {
     parts.push('天气炎热，建议穿着短袖短裤等清凉衣物，注意防暑防晒');
   } else if (avgTemp >= 26) {
@@ -166,7 +206,6 @@ export function getWeatherHint(weather: Weather): string {
     parts.push('天气严寒，请穿着最厚实的冬季衣物，做好防寒措施');
   }
 
-  // Condition-based carry items
   if (cond === 'heavy_rain' || cond === 'moderate_rain') {
     parts.push('建议携带雨伞或雨衣，穿防水鞋');
   } else if (cond === 'light_rain') {
@@ -181,7 +220,6 @@ export function getWeatherHint(weather: Weather): string {
     parts.push('请关注台风预警，尽量避免户外活动');
   }
 
-  // Precipitation reminder
   if (weather.precipitation >= 70) {
     parts.push('降水概率较高，请务必携带雨具');
   }

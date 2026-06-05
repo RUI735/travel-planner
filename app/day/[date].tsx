@@ -109,7 +109,7 @@ export default function DayDetailScreen() {
       try {
         const firstSpot = day!.spots[0];
         if (firstSpot) {
-          const weather = await fetchWeather(firstSpot.lat, firstSpot.lng, day!.date);
+          const weather = await fetchWeather(firstSpot.lat, firstSpot.lng, day!.date, destination);
           const alert = checkWeatherAlert(weather, day!.spots);
           updateDay(day!.date, (d) => ({ ...d, weather, weatherAlert: alert }));
         }
