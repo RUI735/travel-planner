@@ -80,9 +80,7 @@ export async function calculateRoute(
     const data = await response.json();
 
     if (data.status !== '1') {
-      console.error(
-        `calculateRoute: unexpected status "${data.status}" for origin ${origin.lat},${origin.lng} -> dest ${destination.lat},${destination.lng}`
-      );
+      // Silently return null — status "0" means no key / quota exceeded
       return null;
     }
 
