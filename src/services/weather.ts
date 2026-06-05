@@ -90,6 +90,7 @@ async function getLocationId(cityName: string, lat: number, lng: number): Promis
     const url = `${GEO_BASE}/city/lookup?location=${encodeURIComponent(query)}&key=${API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
+    console.log('[QWeather Geo] query:', query, 'code:', data.code, 'location:', data.location?.[0]?.name, data.location?.[0]?.id);
     if (data.code === '200' && data.location?.[0]?.id) {
       const id = data.location[0].id;
       locationCache.set(cacheKey, id);
@@ -116,8 +117,10 @@ export async function fetchWeather(
     const url = `${WEATHER_BASE}/7d?location=${locationId}&key=${API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
+    console.log('[QWeather] status:', res.status, 'code:', data.code, 'daily count:', data.daily?.length, 'first date:', data.daily?.[0]?.fxDate);
 
     if (data.code !== '200' || !data.daily) {
+      console.log('[QWeather] FAILED — full response:', JSON.stringify(data));
       throw new Error(`QWeather API error: code=${data.code}`);
     }
 
