@@ -89,10 +89,11 @@ export async function fetchWeather(
     const res = await fetch(url);
     const text = await res.text();
     let data: any;
-    try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 100) }; }
+    try { data = JSON.parse(text); } catch { data = {}; }
 
     if (data.code !== '200' || !data.daily) {
-      throw new Error(data.raw ? `raw:${data.raw}` : `code:${data.code}`);
+      // Dump full response for debugging
+      throw new Error(text.slice(0, 80));
     }
 
     const targetDate = date.split('T')[0];
