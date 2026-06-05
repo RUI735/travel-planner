@@ -1,80 +1,50 @@
-// src/services/weather.ts
+// src/services/weather.ts — Open-Meteo (free, no key, 16-day forecast)
 import { Weather, WeatherCondition, WeatherAlert, Spot } from '../types/trip';
-import Constants from 'expo-constants';
 
-const API_KEY = Constants.expoConfig?.extra?.qweatherApiKey ?? '';
-const WEATHER_BASE = 'https://devapi.qweather.com/v7/weather';
+const BASE = 'https://api.open-meteo.com/v1/forecast';
 
-// Map QWeather icon codes to WeatherCondition
-const CONDITION_MAP: Record<string, WeatherCondition> = {
-  '100': 'sunny',       // 晴
-  '101': 'cloudy',      // 多云
-  '102': 'cloudy',      // 少云
-  '103': 'cloudy',      // 晴间多云
-  '104': 'overcast',    // 阴
-  '150': 'sunny',       // 夜晚晴
-  '151': 'cloudy',      // 夜晚多云
-  '152': 'cloudy',      // 夜晚少云
-  '153': 'cloudy',      // 夜晚晴间多云
-  '154': 'overcast',    // 夜晚阴
-  '300': 'light_rain',  // 阵雨
-  '301': 'light_rain',  // 强阵雨
-  '302': 'heavy_rain',  // 雷阵雨
-  '303': 'heavy_rain',  // 强雷阵雨
-  '304': 'heavy_rain',  // 雷阵雨伴有冰雹
-  '305': 'light_rain',  // 小雨
-  '306': 'moderate_rain', // 中雨
-  '307': 'heavy_rain',  // 大雨
-  '308': 'heavy_rain',  // 极端降雨
-  '309': 'light_rain',  // 毛毛雨/细雨
-  '310': 'heavy_rain',  // 暴雨
-  '311': 'heavy_rain',  // 大暴雨
-  '312': 'heavy_rain',  // 特大暴雨
-  '313': 'heavy_rain',  // 冻雨
-  '314': 'light_rain',  // 小到中雨
-  '315': 'moderate_rain', // 中到大雨
-  '316': 'heavy_rain',  // 大到暴雨
-  '317': 'heavy_rain',  // 暴雨到大暴雨
-  '318': 'heavy_rain',  // 大暴雨到特大暴雨
-  '399': 'light_rain',  // 雨
-  '400': 'snow',        // 小雪
-  '401': 'snow',        // 中雪
-  '402': 'snow',        // 大雪
-  '403': 'snow',        // 暴雪
-  '404': 'snow',        // 雨夹雪
-  '405': 'snow',        // 雨雪天气
-  '406': 'snow',        // 阵雨夹雪
-  '407': 'snow',        // 阵雪
-  '408': 'snow',        // 小到中雪
-  '409': 'snow',        // 中到大雪
-  '410': 'snow',        // 大到暴雪
-  '499': 'snow',        // 雪
-  '500': 'fog',         // 薄雾
-  '501': 'fog',         // 雾
-  '502': 'fog',         // 霾
-  '503': 'fog',         // 扬沙
-  '504': 'fog',         // 浮尘
-  '507': 'fog',         // 沙尘暴
-  '508': 'fog',         // 强沙尘暴
-  '509': 'fog',         // 浓雾
-  '510': 'fog',         // 强浓雾
-  '511': 'fog',         // 中度霾
-  '512': 'fog',         // 重度霾
-  '513': 'fog',         // 严重霾
-  '514': 'fog',         // 大雾
-  '515': 'fog',         // 特强浓雾
+// Open-Meteo WMO weather codes → WeatherCondition
+const CODE_MAP: Record<number, WeatherCondition> = {
+  0: 'sunny',       // Clear sky
+  1: 'sunny',       // Mainly clear
+  2: 'cloudy',      // Partly cloudy
+  3: 'overcast',    // Overcast
+  45: 'fog',        // Fog
+  48: 'fog',        // Depositing rime fog
+  51: 'light_rain', // Light drizzle
+  53: 'light_rain', // Moderate drizzle
+  55: 'light_rain', // Dense drizzle
+  56: 'light_rain', // Light freezing drizzle
+  57: 'light_rain', // Dense freezing drizzle
+  61: 'light_rain', // Slight rain
+  63: 'moderate_rain', // Moderate rain
+  65: 'heavy_rain', // Heavy rain
+  66: 'light_rain', // Light freezing rain
+  67: 'heavy_rain', // Heavy freezing rain
+  71: 'snow',       // Slight snowfall
+  73: 'snow',       // Moderate snowfall
+  75: 'snow',       // Heavy snowfall
+  77: 'snow',       // Snow grains
+  80: 'light_rain', // Slight rain showers
+  81: 'moderate_rain', // Moderate rain showers
+  82: 'heavy_rain', // Violent rain showers
+  85: 'snow',       // Slight snow showers
+  86: 'snow',       // Heavy snow showers
+  95: 'heavy_rain', // Thunderstorm
+  96: 'heavy_rain', // Thunderstorm with slight hail
+  99: 'heavy_rain', // Thunderstorm with heavy hail
 };
 
-function mapCondition(iconCode: string): WeatherCondition {
-  return CONDITION_MAP[iconCode] ?? 'sunny';
+function mapCode(code: number): WeatherCondition {
+  return CODE_MAP[code] ?? 'sunny';
 }
 
-function isBadWeather(condition: WeatherCondition): boolean {
-  return ['heavy_rain', 'moderate_rain', 'typhoon', 'snow'].includes(condition);
+function isBadWeather(c: WeatherCondition): boolean {
+  return ['heavy_rain', 'moderate_rain', 'typhoon', 'snow'].includes(c);
 }
 
-function isMildBadWeather(condition: WeatherCondition): boolean {
-  return ['light_rain', 'overcast', 'fog'].includes(condition);
+function isMildBadWeather(c: WeatherCondition): boolean {
+  return ['light_rain', 'overcast', 'fog'].includes(c);
 }
 
 export async function fetchWeather(
@@ -83,54 +53,55 @@ export async function fetchWeather(
   date: string,
   _cityName?: string
 ): Promise<Weather> {
-  try {
-    // QWeather accepts direct lat,lng coordinates — no geo lookup needed
-    const url = `${WEATHER_BASE}/7d?location=${lng.toFixed(2)},${lat.toFixed(2)}&key=${API_KEY}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    let data: any;
-    try { data = JSON.parse(text); } catch { data = {}; }
+  const target = date.split('T')[0];
 
-    if (data.code !== '200' || !data.daily) {
-      // Dump full response for debugging
-      throw new Error(text.slice(0, 80));
+  try {
+    const url =
+      `${BASE}?latitude=${lat}&longitude=${lng}` +
+      `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+      `&timezone=auto&start_date=${target}&end_date=${target}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.daily || !data.daily.time?.length) {
+      throw new Error('no-daily');
     }
 
-    const targetDate = date.split('T')[0];
-    const forecast = data.daily.find((d: any) => d.fxDate === targetDate);
-
-    if (!forecast) {
-      const dates = data.daily.map((d: any) => d.fxDate).join(',');
+    const idx = data.daily.time.findIndex((t: string) => t === target);
+    if (idx < 0) {
+      // Beyond 16-day range
       return {
         condition: 'sunny',
         highTemp: -999,
         lowTemp: -999,
         precipitation: 0,
         alertLevel: 'none',
-        fetchedAt: dates || 'no-daily',
+        fetchedAt: new Date().toISOString(),
       };
     }
 
-    const condition = mapCondition(forecast.iconDay ?? '100');
-    const precip = parseFloat(forecast.precip ?? '0');
+    const code = data.daily.weathercode?.[idx] ?? 0;
+    const high = Math.round(data.daily.temperature_2m_max?.[idx] ?? 0);
+    const low = Math.round(data.daily.temperature_2m_min?.[idx] ?? 0);
+    const precip = data.daily.precipitation_probability_max?.[idx] ?? 0;
 
     return {
-      condition,
-      highTemp: parseInt(forecast.tempMax ?? '0', 10),
-      lowTemp: parseInt(forecast.tempMin ?? '0', 10),
-      precipitation: precip > 0 ? Math.round(precip) : 0,
+      condition: mapCode(code),
+      highTemp: high,
+      lowTemp: low,
+      precipitation: precip,
       alertLevel: 'none',
       fetchedAt: new Date().toISOString(),
     };
-  } catch (err: any) {
-    // Encode error info in return fields for debugging
+  } catch {
     return {
       condition: 'sunny',
       highTemp: -999,
-      lowTemp: err?.message ? -888 : -999,
+      lowTemp: -999,
       precipitation: 0,
       alertLevel: 'none',
-      fetchedAt: String(err?.message ?? 'unknown').slice(0, 50),
+      fetchedAt: new Date().toISOString(),
     };
   }
 }
