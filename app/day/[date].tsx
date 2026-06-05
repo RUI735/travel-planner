@@ -38,17 +38,21 @@ export default function DayDetailScreen() {
     : null;
 
   async function recalcRoutes(spots: Spot[]) {
-    if (hotelSpot && spots.length >= 1) {
-      const allPoints = [hotelSpot, ...spots, hotelSpot];
-      const routes = await calculateAllRoutes(allPoints);
-      const checked = checkRouteOptimality(routes);
-      updateDay(date, (d) => ({ ...d, routes: checked }));
-    } else if (spots.length >= 2) {
-      const routes = await calculateAllRoutes(spots);
-      const checked = checkRouteOptimality(routes);
-      updateDay(date, (d) => ({ ...d, routes: checked }));
-    } else {
-      updateDay(date, (d) => ({ ...d, routes: [] }));
+    try {
+      if (hotelSpot && spots.length >= 1) {
+        const allPoints = [hotelSpot, ...spots, hotelSpot];
+        const routes = await calculateAllRoutes(allPoints);
+        const checked = checkRouteOptimality(routes);
+        updateDay(date, (d) => ({ ...d, routes: checked }));
+      } else if (spots.length >= 2) {
+        const routes = await calculateAllRoutes(spots);
+        const checked = checkRouteOptimality(routes);
+        updateDay(date, (d) => ({ ...d, routes: checked }));
+      } else {
+        updateDay(date, (d) => ({ ...d, routes: [] }));
+      }
+    } catch {
+      // Route calc failure is non-blocking — keep existing routes
     }
   }
 
@@ -189,16 +193,17 @@ export default function DayDetailScreen() {
         {sortedSpots.length > 0 ? (
           <>
             {/* Hotel → First Spot */}
-            {hotel && day.routes.length > 0 && (() => {
+            {hotel && (() => {
               const hotelRoute = day.routes.find((r) => r.fromSpotId === '__hotel__');
-              if (!hotelRoute) return null;
               return (
                 <View style={styles.hotelLeg}>
                   <Text style={styles.hotelLegIcon}>🏨</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.hotelLegName}>{hotel.name}</Text>
+                    <Text style={styles.hotelLegName}>从 {hotel.name} 出发</Text>
                     <Text style={styles.hotelLegRoute}>
-                      🚗 约 {hotelRoute.driveMinutes} 分钟 · 🚌 约 {hotelRoute.transitMinutes} 分钟 · {hotelRoute.distanceKm} km
+                      {hotelRoute
+                        ? `🚗 约 ${hotelRoute.driveMinutes} 分钟 · 🚌 约 ${hotelRoute.transitMinutes} 分钟 · ${hotelRoute.distanceKm} km`
+                        : '路线计算中...'}
                     </Text>
                   </View>
                   <Text style={styles.hotelLegArrow}>↓</Text>
@@ -223,14 +228,14 @@ export default function DayDetailScreen() {
                 [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
                 reorderSpots(date, ids);
                 const reordered = ids.map((id) => sortedSpots.find((s) => s.id === id)!).filter(Boolean);
-                recalcRoutes(reordered);
+                void recalcRoutes(reordered);
               } : undefined}
               onMoveDown={idx < sortedSpots.length - 1 ? () => {
                 const ids = sortedSpots.map((s) => s.id);
                 [ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
                 reorderSpots(date, ids);
                 const reordered = ids.map((id) => sortedSpots.find((s) => s.id === id)!).filter(Boolean);
-                recalcRoutes(reordered);
+                void recalcRoutes(reordered);
               } : undefined}
               onDelete={() => {
                 const remaining = sortedSpots.filter((s) => s.id !== spot.id);
@@ -238,21 +243,22 @@ export default function DayDetailScreen() {
                   ...d,
                   spots: remaining.map((s, i) => ({ ...s, order: i + 1 })),
                 }));
-                recalcRoutes(remaining);
+                void recalcRoutes(remaining);
               }}
             />
             ))}
             {/* Last Spot → Hotel */}
-            {hotel && day.routes.length > 0 && (() => {
+            {hotel && (() => {
               const returnRoute = day.routes.find((r) => r.toSpotId === '__hotel__');
-              if (!returnRoute) return null;
               return (
                 <View style={styles.hotelLeg}>
                   <Text style={styles.hotelLegArrow}>↓</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.hotelLegName}>{hotel.name}</Text>
+                    <Text style={styles.hotelLegName}>返回 {hotel.name}</Text>
                     <Text style={styles.hotelLegRoute}>
-                      🚗 约 {returnRoute.driveMinutes} 分钟 · 🚌 约 {returnRoute.transitMinutes} 分钟 · {returnRoute.distanceKm} km
+                      {returnRoute
+                        ? `🚗 约 ${returnRoute.driveMinutes} 分钟 · 🚌 约 ${returnRoute.transitMinutes} 分钟 · ${returnRoute.distanceKm} km`
+                        : '路线计算中...'}
                     </Text>
                   </View>
                   <Text style={styles.hotelLegIcon}>🏨</Text>
