@@ -3,7 +3,6 @@ import { Weather, WeatherCondition, WeatherAlert, Spot } from '../types/trip';
 import Constants from 'expo-constants';
 
 const API_KEY = Constants.expoConfig?.extra?.qweatherApiKey ?? '';
-const GEO_BASE = 'https://geoapi.qweather.com/v2';
 const WEATHER_BASE = 'https://devapi.qweather.com/v7/weather';
 
 // Map QWeather icon codes to WeatherCondition
@@ -78,50 +77,20 @@ function isMildBadWeather(condition: WeatherCondition): boolean {
   return ['light_rain', 'overcast', 'fog'].includes(condition);
 }
 
-// Cache city location IDs to avoid repeated geocode calls
-const locationCache = new Map<string, string>();
-
-async function getLocationId(cityName: string, lat: number, lng: number): Promise<string | null> {
-  const cacheKey = cityName || `${lat},${lng}`;
-  if (locationCache.has(cacheKey)) return locationCache.get(cacheKey)!;
-
-  try {
-    const query = cityName || `${lng},${lat}`;
-    const url = `${GEO_BASE}/city/lookup?location=${encodeURIComponent(query)}&key=${API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    console.log('[QWeather Geo] query:', query, 'code:', data.code, 'location:', data.location?.[0]?.name, data.location?.[0]?.id);
-    if (data.code === '200' && data.location?.[0]?.id) {
-      const id = data.location[0].id;
-      locationCache.set(cacheKey, id);
-      return id;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 export async function fetchWeather(
   lat: number,
   lng: number,
   date: string,
-  cityName?: string
+  _cityName?: string
 ): Promise<Weather> {
   try {
-    const locationId = await getLocationId(cityName ?? '', lat, lng);
-    if (!locationId) {
-      throw new Error(`city:${cityName || 'none'} key:${API_KEY ? 'OK' : 'EMPTY'}`);
-    }
-
-    const url = `${WEATHER_BASE}/7d?location=${locationId}&key=${API_KEY}`;
+    // QWeather accepts direct lat,lng coordinates — no geo lookup needed
+    const url = `${WEATHER_BASE}/7d?location=${lng.toFixed(2)},${lat.toFixed(2)}&key=${API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
-    console.log('[QWeather] status:', res.status, 'code:', data.code, 'daily count:', data.daily?.length, 'first date:', data.daily?.[0]?.fxDate);
 
     if (data.code !== '200' || !data.daily) {
-      console.log('[QWeather] FAILED — full response:', JSON.stringify(data));
-      throw new Error(`QWeather API error: code=${data.code}`);
+      throw new Error(`QWeather code:${data.code}`);
     }
 
     const targetDate = date.split('T')[0];
@@ -129,14 +98,13 @@ export async function fetchWeather(
 
     if (!forecast) {
       const dates = data.daily.map((d: any) => d.fxDate).join(',');
-      // Beyond 7-day forecast range — show first available date for debugging
       return {
         condition: 'sunny',
         highTemp: -999,
-        lowTemp: data.daily[0] ? parseInt(data.daily[0].tempMin ?? '0', 10) : -999,
-        precipitation: data.daily.length,
+        lowTemp: -999,
+        precipitation: 0,
         alertLevel: 'none',
-        fetchedAt: dates, // reuse field for debug: show available date range
+        fetchedAt: dates || 'no-daily',
       };
     }
 
