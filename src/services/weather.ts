@@ -151,14 +151,15 @@ export async function fetchWeather(
       alertLevel: 'none',
       fetchedAt: new Date().toISOString(),
     };
-  } catch {
+  } catch (err: any) {
+    // Encode error info in return fields for debugging
     return {
       condition: 'sunny',
       highTemp: -999,
-      lowTemp: -999,
+      lowTemp: err?.message ? -888 : -999,
       precipitation: 0,
       alertLevel: 'none',
-      fetchedAt: new Date().toISOString(),
+      fetchedAt: String(err?.message ?? 'unknown').slice(0, 50),
     };
   }
 }
