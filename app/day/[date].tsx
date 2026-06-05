@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity, FlatList } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTripStore } from '../../src/store/useTripStore';
 import { Day, Spot } from '../../src/types/trip';
 import { fetchWeather, checkWeatherAlert } from '../../src/services/weather';
@@ -8,6 +8,14 @@ import { calculateAllRoutes, checkRouteOptimality, searchPOI, POIResult } from '
 import WeatherBanner from '../../src/components/WeatherBanner';
 import SpotCard from '../../src/components/SpotCard';
 import MapRoute from '../../src/components/MapRoute';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '../../src/theme';
+
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+function getDateLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const m = d.getMonth() + 1; const day = d.getDate();
+  return `${m}月${day}日 ${WEEKDAYS[d.getDay()]}`;
+}
 
 export default function DayDetailScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
@@ -22,6 +30,7 @@ export default function DayDetailScreen() {
   const [searching, setSearching] = useState(false);
 
   const destination = currentTrip?.destination ?? '';
+  const router = useRouter();
 
   async function handleSearch(text: string) {
     setSearchQuery(text);
@@ -63,6 +72,10 @@ export default function DayDetailScreen() {
   }
 
   const day: Day | undefined = currentTrip?.days.find((d) => d.date === date);
+  const dayIndex = currentTrip?.days.findIndex((d) => d.date === date) ?? -1;
+  const totalDays = currentTrip?.days.length ?? 0;
+  const prevDate = dayIndex > 0 ? currentTrip!.days[dayIndex - 1].date : null;
+  const nextDate = dayIndex < totalDays - 1 ? currentTrip!.days[dayIndex + 1].date : null;
 
   useEffect(() => {
     if (!day || !currentTrip) return;
@@ -104,19 +117,33 @@ export default function DayDetailScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      <View style={styles.dayNav}>
+        {prevDate ? (
+          <TouchableOpacity onPress={() => router.replace(`/day/${prevDate}`)}>
+            <Text style={styles.dayNavArrow}>← 前一天</Text>
+          </TouchableOpacity>
+        ) : <View />}
+        <View style={styles.dayNavCenter}>
+          <Text style={styles.dayNavTitle}>第 {dayIndex + 1} 天</Text>
+          <Text style={styles.dayNavDate}>{getDateLabel(date)}</Text>
+        </View>
+        {nextDate ? (
+          <TouchableOpacity onPress={() => router.replace(`/day/${nextDate}`)}>
+            <Text style={styles.dayNavArrow}>后一天 →</Text>
+          </TouchableOpacity>
+        ) : <View />}
+      </View>
+
       {day.weather && (
         <WeatherBanner
           weather={day.weather}
           alert={day.weatherAlert}
-          onIgnore={() => {
-            updateDay(date, (d) => ({ ...d, weatherAlert: null }));
-          }}
         />
       )}
 
       {loading && (
         <View style={styles.loadingBar}>
-          <ActivityIndicator size="small" color="#4A90D9" />
+          <ActivityIndicator size="small" color={Colors.primary} />
           <Text style={styles.loadingText}>加载地图和天气...</Text>
         </View>
       )}
@@ -132,10 +159,10 @@ export default function DayDetailScreen() {
         </View>
       )}
 
-      {sortedSpots.length > 0 && (
-        <View style={styles.spotsSection}>
-          <Text style={styles.sectionTitle}>景点安排</Text>
-          {sortedSpots.map((spot, idx) => (
+      <View style={styles.spotsSection}>
+        <Text style={styles.sectionTitle}>景点安排</Text>
+        {sortedSpots.length > 0 ? (
+          sortedSpots.map((spot, idx) => (
             <SpotCard
               key={spot.id}
               spot={spot}
@@ -156,9 +183,15 @@ export default function DayDetailScreen() {
                 }));
               }}
             />
-          ))}
-        </View>
-      )}
+          ))
+        ) : (
+          <View style={styles.emptySpots}>
+            <Text style={styles.emptySpotsIcon}>📍</Text>
+            <Text style={styles.emptySpotsTitle}>还没有添加景点</Text>
+            <Text style={styles.emptySpotsHint}>点击下方按钮，添加你的第一个景点</Text>
+          </View>
+        )}
+      </View>
 
       {/* Search & Add Spot Section */}
       <View style={styles.addSection}>
@@ -186,7 +219,7 @@ export default function DayDetailScreen() {
               </TouchableOpacity>
             </View>
             {searching && (
-              <ActivityIndicator size="small" color="#4A90D9" style={{ padding: 12 }} />
+              <ActivityIndicator size="small" color={Colors.primary} style={{ padding: Spacing.md }} />
             )}
             {searchResults.map((poi, i) => (
               <TouchableOpacity
@@ -212,76 +245,81 @@ export default function DayDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, color: '#999' },
-  loadingBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 8, gap: 8 },
-  loadingText: { fontSize: 12, color: '#999' },
+  emptyText: { fontSize: FontSize.md, color: Colors.textSecondary },
+  loadingBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.sm, gap: Spacing.sm },
+  loadingText: { fontSize: FontSize.xs, color: Colors.textSecondary },
   budgetBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    margin: 12,
-    padding: 14,
-    backgroundColor: '#FFF8E1',
-    borderRadius: 12,
-    gap: 8,
+    margin: Spacing.md,
+    padding: Spacing.lg,
+    backgroundColor: Colors.budgetBg,
+    borderRadius: Radius.lg,
+    gap: Spacing.sm,
   },
   budgetIcon: { fontSize: 18 },
-  budgetText: { fontSize: 13, color: '#5D4037', flex: 1, lineHeight: 20 },
-  spotsSection: { padding: 16, gap: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginBottom: 8 },
-  addSection: { padding: 16, paddingTop: 0 },
+  budgetText: { fontSize: FontSize.sm, color: '#5D4037', flex: 1, lineHeight: 20 },
+  spotsSection: { padding: Spacing.lg, gap: Spacing.md },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: Spacing.sm },
+  addSection: { padding: Spacing.lg, paddingTop: 0 },
   addButton: {
     borderWidth: 2,
-    borderColor: '#4A90D9',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
     alignItems: 'center',
   },
-  addButtonText: { color: '#4A90D9', fontSize: 15, fontWeight: '600' },
+  addButtonText: { color: Colors.primary, fontSize: 15, fontWeight: '600' },
   searchBox: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    ...Shadow.card,
   },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   searchInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: Colors.textMuted,
+    borderRadius: Radius.md,
     padding: 10,
     fontSize: 14,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: Colors.surfaceAlt,
   },
-  cancelText: { color: '#4A90D9', fontSize: 14, fontWeight: '500' },
+  cancelText: { color: Colors.primary, fontSize: 14, fontWeight: '500' },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    gap: 8,
+    borderBottomColor: Colors.primaryLight,
+    gap: Spacing.sm,
   },
-  resultName: { fontSize: 15, fontWeight: '500', color: '#333' },
-  resultAddr: { fontSize: 12, color: '#999', marginTop: 2 },
+  resultName: { fontSize: 15, fontWeight: '500', color: Colors.text },
+  resultAddr: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
   resultAdd: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4A90D9',
-    color: '#fff',
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    color: Colors.white,
     textAlign: 'center',
     lineHeight: 28,
     fontSize: 18,
     fontWeight: '600',
     overflow: 'hidden',
   },
-  noResult: { padding: 16, textAlign: 'center', color: '#999', fontSize: 13 },
+  noResult: { padding: Spacing.lg, textAlign: 'center', color: Colors.textSecondary, fontSize: FontSize.sm },
+  dayNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.primaryLight },
+  dayNavArrow: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
+  dayNavCenter: { alignItems: 'center' },
+  dayNavTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text },
+  dayNavDate: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
+  emptySpots: { alignItems: 'center', paddingVertical: Spacing.xxl, gap: Spacing.sm },
+  emptySpotsIcon: { fontSize: 48 },
+  emptySpotsTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textSecondary },
+  emptySpotsHint: { fontSize: FontSize.sm, color: Colors.textMuted },
 });
