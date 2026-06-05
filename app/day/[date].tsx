@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   budgetIcon: { fontSize: 18 },
-  budgetText: { fontSize: FontSize.sm, color: '#5D4037', flex: 1, lineHeight: 20 },
+  budgetText: { fontSize: FontSize.sm, color: Colors.budgetText, flex: 1, lineHeight: 20 },
   spotsSection: { padding: Spacing.lg, gap: Spacing.md },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: Spacing.sm },
   addSection: { padding: Spacing.lg, paddingTop: 0 },
