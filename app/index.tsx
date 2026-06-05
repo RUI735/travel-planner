@@ -6,6 +6,7 @@ import { useTripStore } from '../src/store/useTripStore';
 import TripCard from '../src/components/TripCard';
 import BudgetSummary from '../src/components/BudgetSummary';
 import EmptyState from '../src/components/EmptyState';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '../src/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -31,6 +32,14 @@ export default function HomeScreen() {
     );
   }
 
+  const metaParts: string[] = [];
+  metaParts.push(`👥 ${currentTrip.partySize}人`);
+  if (currentTrip.budgetTier) {
+    const BUDGET_LABELS: Record<string, string> = { economy: '经济型', comfort: '舒适型', luxury: '轻奢型' };
+    metaParts.push(`💰 ${BUDGET_LABELS[currentTrip.budgetTier] ?? currentTrip.budgetTier}`);
+  }
+  if (currentTrip.isStudent) metaParts.push('🎓 学生');
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -38,6 +47,9 @@ export default function HomeScreen() {
         <Text style={styles.dateRange}>
           {currentTrip.startDate} - {currentTrip.endDate} · {currentTrip.days.length}天{currentTrip.days.length - 1}晚
         </Text>
+        {metaParts.length > 0 && (
+          <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
+        )}
       </View>
 
       <BudgetSummary
@@ -68,16 +80,17 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { padding: 20, backgroundColor: '#4A90D9' },
-  destination: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  dateRange: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  list: { padding: 16, gap: 12 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: { padding: 20, backgroundColor: Colors.white },
+  destination: { fontSize: 24, fontWeight: '700', color: Colors.primary },
+  dateRange: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
+  meta: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
+  list: { padding: Spacing.lg, gap: Spacing.md },
   createButton: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: Colors.primary,
     margin: 16,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: Radius.xl,
     alignItems: 'center',
   },
   createButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
