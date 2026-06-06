@@ -31,6 +31,7 @@ interface TripStore extends TripState {
   addSpot: (date: string, spot: Spot) => void;
   removeSpot: (date: string, spotId: string) => void;
   reorderSpots: (date: string, spotIds: string[]) => void;
+  moveSpot: (fromDate: string, toDate: string, spotId: string) => void;
   updateSpotNotes: (date: string, spotId: string, notes: string) => void;
 }
 
@@ -199,6 +200,35 @@ export const useTripStore = create<TripStore>((set, get) => ({
       return { currentTrip: updatedTrip, trips };
     });
     saveTrips(get().trips).catch((err) => console.error('Failed to save after reorderSpots:', err));
+  },
+
+  moveSpot: (fromDate, toDate, spotId) => {
+    set((state) => {
+      if (!state.currentTrip) return state;
+      const updatedTrip = updateActivePlanDays(state.currentTrip, (days) => {
+        // Find the spot in fromDate
+        const fromDay = days.find((d) => d.date === fromDate);
+        if (!fromDay) return days;
+        const spot = fromDay.spots.find((s) => s.id === spotId);
+        if (!spot) return days;
+
+        return days.map((d) => {
+          if (d.date === fromDate) {
+            const remaining = d.spots.filter((s) => s.id !== spotId);
+            return { ...d, spots: remaining.map((s, i) => ({ ...s, order: i + 1 })) };
+          }
+          if (d.date === toDate) {
+            const newSpot = { ...spot, order: d.spots.length + 1 };
+            return { ...d, spots: [...d.spots, newSpot] };
+          }
+          return d;
+        });
+      });
+      if (!updatedTrip) return state;
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
+      return { currentTrip: updatedTrip, trips };
+    });
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after moveSpot:', err));
   },
 
   updateSpotNotes: (date, spotId, notes) => {

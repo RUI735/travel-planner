@@ -122,6 +122,12 @@ export default function HomeScreen() {
             {metaParts.length > 0 && (
               <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
             )}
+            <TouchableOpacity
+              style={styles.overviewBtn}
+              onPress={() => router.push('/overview')}
+            >
+              <Text style={styles.overviewBtnText}>📋 查看景点总览</Text>
+            </TouchableOpacity>
           </View>
 
           <BudgetSummary
@@ -200,6 +206,15 @@ const styles = StyleSheet.create({
   destination: { fontSize: 24, fontWeight: '700', color: Colors.primary },
   dateRange: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
   meta: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
+  overviewBtn: {
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.md,
+    alignSelf: 'flex-start',
+  },
+  overviewBtnText: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
   list: { padding: Spacing.lg, gap: Spacing.md },
   createButton: {
     backgroundColor: Colors.primary,
