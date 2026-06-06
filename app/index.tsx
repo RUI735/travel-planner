@@ -186,13 +186,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   tripSelector: {
+    minHeight: 72,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.primaryLight,
   },
   tripSelectorContent: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     gap: Spacing.sm,
   },
   tripChip: {
