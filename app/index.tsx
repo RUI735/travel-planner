@@ -126,7 +126,7 @@ export default function HomeScreen() {
               </Text>
             </Text>
             <Text style={styles.tripChipDate}>
-              {getActiveDays(trip).length}天 · {getActiveDays(trip).reduce((sum, d) => sum + d.spots.length, 0)}个景点
+              {getActiveDays(trip).length}天{getActiveDays(trip).length - 1}晚
             </Text>
           </TouchableOpacity>
         ))}
