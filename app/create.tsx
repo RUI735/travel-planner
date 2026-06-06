@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -65,6 +65,14 @@ export default function CreateScreen() {
   const [hotelQuery, setHotelQuery] = useState('');
   const [hotelResults, setHotelResults] = useState<POIResult[]>([]);
   const [searchingHotel, setSearchingHotel] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Auto-scroll to bottom when hotel search opens or results appear
+  useEffect(() => {
+    if (showHotelSearch) {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
+    }
+  }, [showHotelSearch, hotelResults]);
 
   const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -200,7 +208,12 @@ export default function CreateScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <LoadingOverlay visible={status === 'generating'} />
 
         <Text style={styles.label}>目的地</Text>
