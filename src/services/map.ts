@@ -129,6 +129,7 @@ function makeHotelSpot(hotel: Hotel): Spot {
     order: 0,
     reminders: [],
     notes: '',
+    durationMin: null,
   };
 }
 

@@ -45,6 +45,7 @@ export interface Spot {
   order: number;
   reminders: SpotReminder[];
   notes: string;
+  durationMin: number | null;
 }
 
 export interface Meal {

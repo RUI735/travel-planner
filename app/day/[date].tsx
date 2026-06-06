@@ -38,7 +38,7 @@ export default function DayDetailScreen() {
 
   const hotel = currentTrip?.hotel;
   const hotelSpot: Spot | null = hotel
-    ? { id: '__hotel__', name: hotel.name, lat: hotel.lat, lng: hotel.lng, order: 0, reminders: [], notes: '' }
+    ? { id: '__hotel__', name: hotel.name, lat: hotel.lat, lng: hotel.lng, order: 0, reminders: [], notes: '', durationMin: null }
     : null;
 
   async function recalcRoutes(spots: Spot[]) {
@@ -81,6 +81,7 @@ export default function DayDetailScreen() {
       order: (day?.spots.length ?? 0) + 1,
       reminders: [],
       notes: '',
+      durationMin: null,
     };
 
     addSpotToDay(date, newSpot);

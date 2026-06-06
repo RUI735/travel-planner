@@ -10,6 +10,7 @@ function makeSpot(overrides: Partial<Spot> = {}): Spot {
     order: 1,
     reminders: [],
     notes: '',
+    durationMin: null,
     ...overrides,
   };
 }

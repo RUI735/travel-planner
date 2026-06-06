@@ -171,7 +171,14 @@ export default function OverviewScreen() {
                             <Text style={styles.spotOrderText}>{si + 1}</Text>
                           </View>
                           <View style={styles.spotInfo}>
-                            <Text style={styles.spotName}>{spot.name}</Text>
+                            <Text style={styles.spotName}>
+                              {spot.name}
+                              {spot.durationMin != null && spot.durationMin > 0
+                                ? spot.durationMin >= 60
+                                  ? `（建议${spot.durationMin / 60}h）`
+                                  : `（建议${spot.durationMin}min）`
+                                : ''}
+                            </Text>
                             {spot.notes ? (
                               <Text style={styles.spotNotes} numberOfLines={1}>
                                 {spot.notes}

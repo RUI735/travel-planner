@@ -55,7 +55,8 @@ Return ONLY valid JSON matching this structure:
                 { "type": "reservation", "label": "预约方式", "content": "微信公众号提前1天预约" },
                 { "type": "studentDiscount", "label": "学生优惠", "content": "持学生证半价，全日制本科及以下" }
               ],
-              "notes": ""
+              "notes": "",
+              "durationMin": 90
             }
           ]
         }
@@ -74,6 +75,7 @@ Rules:
 - Include opening hours and closed days when known
 - Flag student ID or ID requirements when applicable
 - Include reservation requirements (WeChat, website, etc.)
+- For each spot, include "durationMin" with an estimated visit time in minutes (typical range: 30-180). Museums 90-150, temples 45-90, parks 60-120, viewpoints 20-40, shopping streets 60-90. Relaxed pace gives longer estimates, intensive pace shorter.
 - Add food/dining suggestions near lunchtime
 - Include meal recommendations as "meals" array for each day: 1 breakfast (unless user selected "no early mornings"), 1 lunch, 1 dinner. Each meal must have: type, name, cuisine, pricePerPerson (CNY integer), lat, lng, order (position in day sequence: breakfast=1, lunch=mid, dinner=last). Choose local, authentic restaurants matching the budget tier. Meals are separate from spots — do NOT put restaurant names in the spots array.
 - Use the weather forecast provided in the user message to write a practical, date-specific "weatherNote" for each day (e.g., "今日大雨，建议优先安排室内景点如博物馆，备好雨具"). Mention temperature comfort, rain/snow impact, and clothing/gear tips. Never fabricate weather — if forecast is unavailable, base advice on the destination's typical climate for the given dates.
@@ -277,6 +279,7 @@ ${weatherSection}${multiPlanInstruction}`;
         order: s.order ?? j + 1,
         reminders: (s.reminders ?? []) as SpotReminder[],
         notes: s.notes ?? '',
+        durationMin: s.durationMin != null ? Number(s.durationMin) : null,
       }));
       const weatherAlert = weather ? checkWeatherAlert(weather, spots) : null;
 

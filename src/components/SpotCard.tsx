@@ -75,7 +75,14 @@ export default function SpotCard({
         <View style={styles.orderBadge}>
           <Text style={styles.orderText}>{index + 1}</Text>
         </View>
-        <Text style={styles.name}>{spot.name}</Text>
+        <Text style={styles.name}>
+          {spot.name}
+          {spot.durationMin != null && spot.durationMin > 0
+            ? spot.durationMin >= 60
+              ? `（建议游玩 ${spot.durationMin / 60}h）`
+              : `（建议游玩 ${spot.durationMin}min）`
+            : ''}
+        </Text>
         {isAffected && (
           <View style={styles.affectedBadge}>
             <Text style={styles.affectedText}>天气影响</Text>
