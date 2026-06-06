@@ -30,6 +30,12 @@ const PARTY_TAGS: { key: string; label: string }[] = [
   { key: 'wheelchair', label: '♿ 无障碍需求' },
 ];
 const INTEREST_TAGS = ['美食', '人文历史', '自然风光', '拍照打卡', '文艺展览', '购物', '夜生活', '小众秘境'];
+const CONSTRAINT_TAGS = [
+  { key: 'no_hiking', label: '⛰️ 不爬山' },
+  { key: 'no_early', label: '🌅 不早起' },
+  { key: 'less_walking', label: '🚶 少走路' },
+  { key: 'no_transit', label: '🚫 不坐公交' },
+];
 const PRACTICAL_TAGS = ['学生优惠'];
 const BUDGET_TIERS = [
   { key: 'economy', label: '💰 经济' },
@@ -48,6 +54,7 @@ export default function CreateScreen() {
   const [pace, setPace] = useState<Pace | null>(null);
   const [partyType, setPartyType] = useState<PartyType | null>(null);
   const [partyTags, setPartyTags] = useState<string[]>([]);
+  const [constraints, setConstraints] = useState<string[]>([]);
   const [partySize, setPartySize] = useState(2);
   const [budgetTier, setBudgetTier] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -153,6 +160,7 @@ export default function CreateScreen() {
         pace,
         partyType,
         partyTags,
+        constraints,
       });
 
       let trip: Trip = {
@@ -164,6 +172,7 @@ export default function CreateScreen() {
         pace,
         partyType,
         partyTags,
+        constraints,
         hotel,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -390,6 +399,26 @@ export default function CreateScreen() {
             >
               <Text style={[styles.prefText, selectedPrefs.includes(tag) && styles.prefTextActive]}>
                 {tag}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ---- 特殊限制 ---- */}
+        <Text style={styles.label}>特殊限制（可选）</Text>
+        <View style={styles.prefRow}>
+          {CONSTRAINT_TAGS.map((ct) => (
+            <TouchableOpacity
+              key={ct.key}
+              style={[styles.prefChip, constraints.includes(ct.key) && styles.prefChipActive]}
+              onPress={() => {
+                setConstraints((prev) =>
+                  prev.includes(ct.key) ? prev.filter((c) => c !== ct.key) : [...prev, ct.key]
+                );
+              }}
+            >
+              <Text style={[styles.prefText, constraints.includes(ct.key) && styles.prefTextActive]}>
+                {ct.label}
               </Text>
             </TouchableOpacity>
           ))}

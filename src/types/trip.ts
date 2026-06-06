@@ -105,6 +105,7 @@ export interface Trip {
   pace: Pace | null;
   partyType: PartyType | null;
   partyTags: string[];
+  constraints: string[];
   hotel: Hotel | null;
   plans: TripPlan[];
   activePlanId: string | null;

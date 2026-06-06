@@ -95,6 +95,7 @@ export interface GenerateTripInput {
   pace: string | null;
   partyType: string | null;
   partyTags: string[];
+  constraints: string[];
 }
 
 export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>> {
@@ -120,6 +121,16 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
   const partyTypeNote = input.partyType ? partyTypeLabels[input.partyType] ?? '' : '';
   const partyTagsNote = input.partyTags.length > 0
     ? `Additional needs: ${input.partyTags.map((t) => t === 'elderly' ? 'elderly accompaniment' : t === 'infant' ? 'infant/toddler' : 'wheelchair accessible').join(', ')}.`
+    : '';
+
+  const constraintLabels: Record<string, string> = {
+    no_hiking: 'No mountain climbing or steep hikes — exclude spots tagged with mountain/hiking, prefer flat terrain.',
+    no_early: 'No early mornings — first activity each day starts after 9:00 AM.',
+    less_walking: 'Minimize walking — prefer spots geographically close together, keep walking segments short.',
+    no_transit: 'No public transit — prefer walkable clusters or taxi/ride-hail for longer distances.',
+  };
+  const constraintsNote = input.constraints.length > 0
+    ? `Constraints:\n${input.constraints.map((c) => `- ${constraintLabels[c] ?? c}`).join('\n')}`
     : '';
 
   const budgetLabels: Record<string, string> = {
@@ -198,6 +209,7 @@ Dates: ${input.startDate} to ${input.endDate} (${days.length} days).
 ${partyNote}
 ${partyTypeNote}
 ${partyTagsNote}
+${constraintsNote}
 ${budgetNote}
 ${paceNote}
 ${prefs}
@@ -291,6 +303,7 @@ ${weatherSection}${multiPlanInstruction}`;
     pace: (input.pace as 'relaxed' | 'balanced' | 'intensive' | null) ?? null,
     partyType: (input.partyType as 'solo' | 'couple' | 'family_kids' | 'elderly' | 'friends' | 'family' | null) ?? null,
     partyTags: input.partyTags,
+    constraints: input.constraints,
     plans: tripPlans,
     activePlanId: tripPlans[0]?.id ?? null,
   };

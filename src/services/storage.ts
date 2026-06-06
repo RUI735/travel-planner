@@ -72,6 +72,9 @@ function migrateTrip(trip: Trip): Trip {
   if (trip.partyTags === undefined) {
     trip.partyTags = [];
   }
+  if (trip.constraints === undefined) {
+    trip.constraints = [];
+  }
   // Migration: wrap old top-level "days" into a single TripPlan
   if ((trip as any).days && (!trip.plans || trip.plans.length === 0)) {
     const legacyDays = (trip as any).days;
