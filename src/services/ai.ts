@@ -57,7 +57,7 @@ Rules:
 - Flag student ID or ID requirements when applicable
 - Include reservation requirements (WeChat, website, etc.)
 - Add food/dining suggestions near lunchtime
-- Prefer indoor spots on potential rain days (check seasonal patterns)
+- Use the weather forecast provided in the user message to write a practical, date-specific "weatherNote" for each day (e.g., "今日大雨，建议优先安排室内景点如博物馆，备好雨具"). Mention temperature comfort, rain/snow impact, and clothing/gear tips. Never fabricate weather — if forecast is unavailable, base advice on the destination's typical climate for the given dates.
 - Keep travel distances reasonable (avoid cross-city jumps)
 - Prefer popular, well-reviewed spots suitable for young travelers aged 18-26
 
