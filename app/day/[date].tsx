@@ -33,6 +33,9 @@ export default function DayDetailScreen() {
   const destination = currentTrip?.destination ?? '';
   const router = useRouter();
 
+  // Undo state for spot deletion
+  const [pendingDelete, setPendingDelete] = useState<{ spot: Spot; timer: ReturnType<typeof setTimeout> } | null>(null);
+
   const hotel = currentTrip?.hotel;
   const hotelSpot: Spot | null = hotel
     ? { id: '__hotel__', name: hotel.name, lat: hotel.lat, lng: hotel.lng, order: 0, reminders: [], notes: '' }
@@ -153,7 +156,9 @@ export default function DayDetailScreen() {
     );
   }
 
-  const sortedSpots = [...day.spots].sort((a, b) => a.order - b.order);
+  const sortedSpots = [...day.spots]
+    .filter((s) => s.id !== pendingDelete?.spot.id)
+    .sort((a, b) => a.order - b.order);
 
   return (
     <ScrollView style={styles.container}>
@@ -289,12 +294,28 @@ export default function DayDetailScreen() {
                 void recalcRoutes(reordered);
               } : undefined}
               onDelete={() => {
-                const remaining = sortedSpots.filter((s) => s.id !== spot.id);
-                updateDay(date, (d) => ({
-                  ...d,
-                  spots: remaining.map((s, i) => ({ ...s, order: i + 1 })),
-                }));
-                void recalcRoutes(remaining);
+                // Clear any previous pending delete
+                if (pendingDelete) {
+                  clearTimeout(pendingDelete.timer);
+                  // Actually delete the previously pending spot
+                  const prevSpot = pendingDelete.spot;
+                  const remaining = day!.spots.filter((s) => s.id !== prevSpot.id);
+                  updateDay(date, (d) => ({
+                    ...d,
+                    spots: remaining.map((s, i) => ({ ...s, order: i + 1 })),
+                  }));
+                }
+                // Soft-delete: hide visually, confirm after 3s
+                const timer = setTimeout(() => {
+                  const remainingSpots = day!.spots.filter((s) => s.id !== spot.id);
+                  updateDay(date, (d) => ({
+                    ...d,
+                    spots: remainingSpots.map((s, i) => ({ ...s, order: i + 1 })),
+                  }));
+                  void recalcRoutes(remainingSpots);
+                  setPendingDelete(null);
+                }, 3000);
+                setPendingDelete({ spot, timer });
               }}
             />
             ))}
@@ -373,6 +394,23 @@ export default function DayDetailScreen() {
           </View>
         )}
       </View>
+
+      {/* Undo toast */}
+      {pendingDelete && (
+        <View style={styles.undoToast}>
+          <Text style={styles.undoText} numberOfLines={1}>
+            已移除「{pendingDelete.spot.name}」
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              clearTimeout(pendingDelete.timer);
+              setPendingDelete(null);
+            }}
+          >
+            <Text style={styles.undoLink}>撤销</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -446,6 +484,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   noResult: { padding: Spacing.lg, textAlign: 'center', color: Colors.textSecondary, fontSize: FontSize.sm },
+  undoToast: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    margin: Spacing.lg,
+    padding: Spacing.md,
+    backgroundColor: '#333',
+    borderRadius: Radius.lg,
+  },
+  undoText: { fontSize: FontSize.sm, color: '#fff', flex: 1, marginRight: Spacing.md },
+  undoLink: { fontSize: FontSize.sm, color: '#FF6B6B', fontWeight: '700' },
   planSwitcher: { flexDirection: 'row', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, backgroundColor: Colors.white, gap: Spacing.sm },
   planTab: {
     flex: 1,
