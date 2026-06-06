@@ -186,7 +186,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   tripSelector: {
-    maxHeight: 80,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.primaryLight,
@@ -198,20 +197,21 @@ const styles = StyleSheet.create({
   },
   tripChip: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.textMuted,
     backgroundColor: Colors.white,
     alignItems: 'flex-start',
     flexShrink: 0,
+    minHeight: 52,
   },
   tripChipActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight,
   },
   tripChipText: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.text,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   tripChipDate: {
-    fontSize: 10,
+    fontSize: FontSize.xs,
     color: Colors.textMuted,
     marginTop: 2,
   },
