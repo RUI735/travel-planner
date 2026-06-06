@@ -40,6 +40,10 @@ export default function DayDetailScreen() {
   const [mealResults, setMealResults] = useState<POIResult[]>([]);
   const [searchingMeal, setSearchingMeal] = useState(false);
   const [explainExpanded, setExplainExpanded] = useState(false);
+  const [editingPoint, setEditingPoint] = useState<'start' | 'end' | null>(null);
+  const [pointQuery, setPointQuery] = useState('');
+  const [pointResults, setPointResults] = useState<POIResult[]>([]);
+  const [searchingPoint, setSearchingPoint] = useState(false);
 
   const hotel = currentTrip?.hotel;
 
@@ -62,6 +66,46 @@ export default function DayDetailScreen() {
     const results = await searchPOI(text.trim(), destination);
     setMealResults(results);
     setSearchingMeal(false);
+  }
+
+  async function handlePointSearch(text: string) {
+    setPointQuery(text);
+    if (text.trim().length < 2) { setPointResults([]); return; }
+    setSearchingPoint(true);
+    const results = await searchPOI(text.trim(), destination);
+    setPointResults(results);
+    setSearchingPoint(false);
+  }
+
+  async function handleSetPoint(poi: POIResult) {
+    if (!editingPoint || !day) return;
+    const point = { name: poi.name, lat: poi.lat, lng: poi.lng };
+    if (editingPoint === 'start') {
+      updateDay(date, (d) => ({ ...d, dayStart: point }));
+    } else {
+      updateDay(date, (d) => ({ ...d, dayEnd: point }));
+    }
+    setEditingPoint(null);
+    setPointQuery('');
+    setPointResults([]);
+
+    // Recalculate routes
+    const trip = useTripStore.getState().currentTrip!;
+    const updatedDay = getActiveDays(trip).find((d) => d.date === date);
+    if (updatedDay && updatedDay.spots.length >= 1) {
+      const startPt = updatedDay.dayStart ?? trip.hotel;
+      const endPt = updatedDay.dayEnd ?? trip.hotel;
+      const pts: Spot[] = [
+        ...(startPt ? [{ id: '__start__', name: startPt.name, lat: startPt.lat, lng: startPt.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot] : []),
+        ...updatedDay.spots,
+        ...(endPt ? [{ id: '__end__', name: endPt.name, lat: endPt.lat, lng: endPt.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot] : []),
+      ];
+      if (pts.length >= 2) {
+        const routes = await calculateAllRoutes(pts);
+        const checked = checkRouteOptimality(routes);
+        updateDay(date, (d) => ({ ...d, routes: checked }));
+      }
+    }
   }
 
   function handleReplaceMeal(poi: POIResult) {
@@ -333,6 +377,82 @@ export default function DayDetailScreen() {
         </View>
       )}
 
+      {/* Editable start / end points */}
+      <View style={styles.pointEditRow}>
+        <TouchableOpacity
+          style={styles.pointEditItem}
+          onPress={() => {
+            setEditingPoint('start');
+            setPointQuery('');
+            setPointResults([]);
+          }}
+        >
+          <Text style={styles.pointEditIcon}>🏁</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pointEditLabel}>起点</Text>
+            <Text style={styles.pointEditValue} numberOfLines={1}>
+              {day.dayStart?.name ?? getStartLabel()}
+            </Text>
+          </View>
+          <Text style={styles.pointEditArrow}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.pointEditItem}
+          onPress={() => {
+            setEditingPoint('end');
+            setPointQuery('');
+            setPointResults([]);
+          }}
+        >
+          <Text style={styles.pointEditIcon}>🏁</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pointEditLabel}>终点</Text>
+            <Text style={styles.pointEditValue} numberOfLines={1}>
+              {day.dayEnd?.name ?? getEndLabel()}
+            </Text>
+          </View>
+          <Text style={styles.pointEditArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Point search overlay */}
+      {editingPoint && (
+        <View style={styles.pointSearchBox}>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={editingPoint === 'start' ? '搜索起点...' : '搜索终点...'}
+              placeholderTextColor={Colors.textMuted}
+              value={pointQuery}
+              onChangeText={handlePointSearch}
+              autoFocus
+            />
+            <TouchableOpacity
+              onPress={() => { setEditingPoint(null); setPointQuery(''); setPointResults([]); }}
+            >
+              <Text style={styles.cancelText}>取消</Text>
+            </TouchableOpacity>
+          </View>
+          {searchingPoint && <ActivityIndicator size="small" color={Colors.primary} style={{ padding: Spacing.md }} />}
+          {pointResults.map((poi, i) => (
+            <TouchableOpacity
+              key={`pt-${poi.name}-${i}`}
+              style={styles.resultRow}
+              onPress={() => handleSetPoint(poi)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.resultName}>{poi.name}</Text>
+                <Text style={styles.resultAddr} numberOfLines={1}>{poi.address}</Text>
+              </View>
+              <Text style={styles.resultAdd}>设为{editingPoint === 'start' ? '起点' : '终点'}</Text>
+            </TouchableOpacity>
+          ))}
+          {!searchingPoint && pointQuery.length >= 2 && pointResults.length === 0 && (
+            <Text style={styles.noResult}>未找到，换个关键词试试</Text>
+          )}
+        </View>
+      )}
+
       <View style={styles.spotsSection}>
         <Text style={styles.sectionTitle}>景点安排</Text>
 
@@ -593,6 +713,31 @@ const styles = StyleSheet.create({
   },
   budgetIcon: { fontSize: 18 },
   budgetText: { fontSize: FontSize.sm, color: Colors.budgetText, flex: 1, lineHeight: 20 },
+  pointEditRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm },
+  pointEditItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
+  pointEditIcon: { fontSize: 16 },
+  pointEditLabel: { fontSize: 10, color: Colors.textMuted },
+  pointEditValue: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '500' },
+  pointEditArrow: { fontSize: 16, color: Colors.textMuted },
+  pointSearchBox: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
   spotsSection: { padding: Spacing.lg, gap: Spacing.md },
   mealsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
   mealCard: {
