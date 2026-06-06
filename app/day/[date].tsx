@@ -540,22 +540,23 @@ export default function DayDetailScreen() {
         {sortedSpots.length > 0 ? (
           <>
             {/* Start → First Spot */}
-            {(() => {
-              const startRoute = day.routes.find((r) => r.fromSpotId === '__start__');
-              if (!startRoute) return null;
-              return (
-                <View style={styles.hotelLeg}>
-                  <Text style={styles.hotelLegIcon}>{getPointIcon(getStartLabel())}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.hotelLegName}>从 {getStartLabel()} 出发</Text>
+            <View style={styles.hotelLeg}>
+              <Text style={styles.hotelLegIcon}>{getPointIcon(getStartLabel())}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hotelLegName}>从 {getStartLabel()} 出发</Text>
+                {(() => {
+                  const startRoute = day.routes.find((r) => r.fromSpotId === '__start__');
+                  return startRoute ? (
                     <Text style={styles.hotelLegRoute}>
                       🚗 约 {startRoute.driveMinutes} 分钟 · 🚌 约 {startRoute.transitMinutes} 分钟 · {startRoute.distanceKm} km
                     </Text>
-                  </View>
-                  <Text style={styles.hotelLegArrow}>↓</Text>
-                </View>
-              );
-            })()}
+                  ) : (
+                    <Text style={styles.hotelLegHint}>点击上方 🏁 设置起点</Text>
+                  );
+                })()}
+              </View>
+              <Text style={styles.hotelLegArrow}>↓</Text>
+            </View>
             {sortedSpots.map((spot, idx) => (
             <SpotCard
               key={spot.id}
@@ -610,22 +611,23 @@ export default function DayDetailScreen() {
             />
             ))}
             {/* Last Spot → End */}
-            {(() => {
-              const returnRoute = day.routes.find((r) => r.toSpotId === '__end__');
-              if (!returnRoute) return null;
-              return (
-                <View style={styles.hotelLeg}>
-                  <Text style={styles.hotelLegArrow}>↓</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.hotelLegName}>返回 {getEndLabel()}</Text>
+            <View style={styles.hotelLeg}>
+              <Text style={styles.hotelLegArrow}>↓</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hotelLegName}>返回 {getEndLabel()}</Text>
+                {(() => {
+                  const returnRoute = day.routes.find((r) => r.toSpotId === '__end__');
+                  return returnRoute ? (
                     <Text style={styles.hotelLegRoute}>
                       🚗 约 {returnRoute.driveMinutes} 分钟 · 🚌 约 {returnRoute.transitMinutes} 分钟 · {returnRoute.distanceKm} km
                     </Text>
-                  </View>
-                  <Text style={styles.hotelLegIcon}>{getPointIcon(getEndLabel())}</Text>
-                </View>
-              );
-            })()}
+                  ) : (
+                    <Text style={styles.hotelLegHint}>点击上方 🏁 设置终点</Text>
+                  );
+                })()}
+              </View>
+              <Text style={styles.hotelLegIcon}>{getPointIcon(getEndLabel())}</Text>
+            </View>
           </>
         ) : (
           <View style={styles.emptySpots}>
@@ -885,4 +887,5 @@ const styles = StyleSheet.create({
   hotelLegArrow: { fontSize: 16, color: Colors.textMuted, alignSelf: 'center' },
   hotelLegName: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
   hotelLegRoute: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  hotelLegHint: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2, fontStyle: 'italic' },
 });
