@@ -98,6 +98,8 @@ export interface Trip {
 export type TripStatus = 'empty' | 'generating' | 'ready' | 'modified' | 'error';
 
 export interface TripState {
+  trips: Trip[];
+  activeTripId: string | null;
   currentTrip: Trip | null;
   status: TripStatus;
   errorMessage: string | null;

@@ -18,7 +18,7 @@ const BUDGET_TIERS = [
 
 export default function CreateScreen() {
   const router = useRouter();
-  const { setTrip, setStatus, status } = useTripStore();
+  const { addTrip, setStatus, status } = useTripStore();
 
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -139,7 +139,7 @@ export default function CreateScreen() {
         updatedAt: new Date().toISOString(),
       };
 
-      setTrip(trip);
+      addTrip(trip);
       router.replace('/');
     } catch (err: any) {
       setStatus('error', err.message || '生成失败，请重试');

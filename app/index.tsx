@@ -1,5 +1,4 @@
-// app/index.tsx
-import { View, FlatList, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, FlatList, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useTripStore } from '../src/store/useTripStore';
@@ -16,15 +15,21 @@ const BUDGET_LABELS: Record<string, string> = {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { currentTrip, status } = useTripStore();
+  const trips = useTripStore((s) => s.trips);
+  const activeTripId = useTripStore((s) => s.activeTripId);
+  const currentTrip = useTripStore((s) => s.currentTrip);
+  const status = useTripStore((s) => s.status);
+  const setActiveTrip = useTripStore((s) => s.setActiveTrip);
+  const removeTrip = useTripStore((s) => s.removeTrip);
 
   useFocusEffect(
     useCallback(() => {
-      useTripStore.getState().loadTripFromStorage();
+      useTripStore.getState().loadTripsFromStorage();
     }, [])
   );
 
-  if (!currentTrip || status === 'empty') {
+  // No trips yet
+  if (trips.length === 0) {
     return (
       <View style={styles.container}>
         <EmptyState />
@@ -38,47 +43,110 @@ export default function HomeScreen() {
     );
   }
 
+  // Multi-trip selector
   const metaParts: string[] = [];
-  metaParts.push(`👥 ${currentTrip.partySize}人`);
-  if (currentTrip.budgetTier) {
-    metaParts.push(`💰 ${BUDGET_LABELS[currentTrip.budgetTier] ?? currentTrip.budgetTier}`);
+  if (currentTrip) {
+    metaParts.push(`👥 ${currentTrip.partySize}人`);
+    if (currentTrip.budgetTier) {
+      metaParts.push(`💰 ${BUDGET_LABELS[currentTrip.budgetTier] ?? currentTrip.budgetTier}`);
+    }
+    if (currentTrip.isStudent) metaParts.push('🎓 学生');
   }
-  if (currentTrip.isStudent) metaParts.push('🎓 学生');
+
+  function handleDeleteTrip(id: string) {
+    const trip = trips.find((t) => t.id === id);
+    if (!trip) return;
+    Alert.alert(
+      '删除行程',
+      `确定要删除「${trip.destination}」的行程吗？此操作不可撤销。`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: () => removeTrip(id),
+        },
+      ]
+    );
+  }
+
+  function handleSelectTrip(id: string) {
+    setActiveTrip(id);
+  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.destination}>{currentTrip.destination}</Text>
-        <Text style={styles.dateRange}>
-          {currentTrip.startDate} - {currentTrip.endDate} · {currentTrip.days.length}天{currentTrip.days.length - 1}晚
-        </Text>
-        {metaParts.length > 0 && (
-          <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
-        )}
-      </View>
+      {/* Trip selector */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tripSelector}
+        contentContainerStyle={styles.tripSelectorContent}
+      >
+        {trips.map((trip) => (
+          <TouchableOpacity
+            key={trip.id}
+            style={[
+              styles.tripChip,
+              trip.id === activeTripId && styles.tripChipActive,
+            ]}
+            onPress={() => handleSelectTrip(trip.id)}
+            onLongPress={() => handleDeleteTrip(trip.id)}
+          >
+            <Text
+              style={[
+                styles.tripChipText,
+                trip.id === activeTripId && styles.tripChipTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {trip.destination}
+            </Text>
+            <Text style={styles.tripChipDate}>
+              {trip.startDate} ~ {trip.endDate}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-      <BudgetSummary
-        days={currentTrip.days}
-        partySize={currentTrip.partySize}
-      />
+      {currentTrip && (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.destination}>{currentTrip.destination}</Text>
+            <Text style={styles.dateRange}>
+              {currentTrip.startDate} - {currentTrip.endDate} · {currentTrip.days.length}天{currentTrip.days.length - 1}晚
+            </Text>
+            {metaParts.length > 0 && (
+              <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
+            )}
+          </View>
 
-      <FlatList
-        data={currentTrip.days}
-        keyExtractor={(item) => item.date}
-        renderItem={({ item }) => (
-          <TripCard
-            day={item}
-            onPress={() => router.push(`/day/${item.date}`)}
+          <BudgetSummary
+            days={currentTrip.days}
+            partySize={currentTrip.partySize}
           />
-        )}
-        contentContainerStyle={styles.list}
-      />
+
+          <FlatList
+            data={currentTrip.days}
+            keyExtractor={(item) => item.date}
+            renderItem={({ item }) => (
+              <TripCard
+                day={item}
+                onPress={() => router.push(`/day/${item.date}`)}
+              />
+            )}
+            contentContainerStyle={styles.list}
+          />
+        </>
+      )}
 
       <TouchableOpacity
         style={styles.createButton}
         onPress={() => router.push('/create')}
       >
-        <Text style={styles.createButtonText}>重新规划</Text>
+        <Text style={styles.createButtonText}>
+          {trips.length === 0 ? '开始规划' : '新建行程'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -86,6 +154,44 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  tripSelector: {
+    maxHeight: 72,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.primaryLight,
+  },
+  tripSelectorContent: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  tripChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.textMuted,
+    backgroundColor: Colors.white,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  tripChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  tripChipText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  tripChipTextActive: {
+    color: Colors.primary,
+  },
+  tripChipDate: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
   header: { padding: 20, backgroundColor: Colors.white },
   destination: { fontSize: 24, fontWeight: '700', color: Colors.primary },
   dateRange: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },

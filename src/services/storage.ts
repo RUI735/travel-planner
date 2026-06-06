@@ -2,45 +2,64 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Trip } from '../types/trip';
 
-const TRIP_KEY = '@travel_planner_current_trip';
+const TRIPS_KEY = '@travel_planner_trips';
+const LEGACY_KEY = '@travel_planner_current_trip';
 
-export async function saveTrip(trip: Trip): Promise<void> {
+export async function saveTrips(trips: Trip[]): Promise<void> {
   try {
-    const json = JSON.stringify(trip);
-    await AsyncStorage.setItem(TRIP_KEY, json);
+    const json = JSON.stringify(trips);
+    await AsyncStorage.setItem(TRIPS_KEY, json);
   } catch (error) {
-    console.error('Failed to save trip:', error);
+    console.error('Failed to save trips:', error);
   }
 }
 
-export async function loadTrip(): Promise<Trip | null> {
+export async function loadTrips(): Promise<Trip[]> {
   try {
-    const json = await AsyncStorage.getItem(TRIP_KEY);
-    if (!json) return null;
-    const trip = JSON.parse(json) as Trip;
-    // Migration: default isStudent to false for trips saved before this field existed
-    if (trip.isStudent === undefined) {
-      trip.isStudent = false;
+    // Try new multi-trip format first
+    const json = await AsyncStorage.getItem(TRIPS_KEY);
+    if (json) {
+      const trips = JSON.parse(json) as Trip[];
+      // Apply migrations to each trip
+      return trips.map(migrateTrip);
     }
-    // Migration: default partySize to 2 for trips saved before this field existed
-    if (trip.partySize === undefined) {
-      trip.partySize = 2;
+
+    // Fallback: migrate legacy single-trip format
+    const legacyJson = await AsyncStorage.getItem(LEGACY_KEY);
+    if (legacyJson) {
+      const trip = JSON.parse(legacyJson) as Trip;
+      await AsyncStorage.removeItem(LEGACY_KEY); // clean up old key
+      const migrated = migrateTrip(trip);
+      return [migrated];
     }
-    // Migration: default budgetTier to null (skipped) for old trips
-    if (trip.budgetTier === undefined) {
-      trip.budgetTier = null;
-    }
-    return trip;
+
+    return [];
   } catch (error) {
-    console.error('Failed to load trip:', error);
-    return null;
+    console.error('Failed to load trips:', error);
+    return [];
   }
 }
 
-export async function clearTrip(): Promise<void> {
+export async function clearAllTrips(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(TRIP_KEY);
+    await AsyncStorage.multiRemove([TRIPS_KEY, LEGACY_KEY]);
   } catch (error) {
-    console.error('Failed to clear trip:', error);
+    console.error('Failed to clear trips:', error);
   }
+}
+
+function migrateTrip(trip: Trip): Trip {
+  // Migration: default isStudent to false for trips saved before this field existed
+  if (trip.isStudent === undefined) {
+    trip.isStudent = false;
+  }
+  // Migration: default partySize to 2 for trips saved before this field existed
+  if (trip.partySize === undefined) {
+    trip.partySize = 2;
+  }
+  // Migration: default budgetTier to null for old trips
+  if (trip.budgetTier === undefined) {
+    trip.budgetTier = null;
+  }
+  return trip;
 }

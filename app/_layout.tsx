@@ -4,10 +4,10 @@ import { useTripStore } from '../src/store/useTripStore';
 import { Colors } from '../src/theme';
 
 export default function RootLayout() {
-  const loadTripFromStorage = useTripStore((s) => s.loadTripFromStorage);
+  const loadTripsFromStorage = useTripStore((s) => s.loadTripsFromStorage);
 
   useEffect(() => {
-    loadTripFromStorage();
+    loadTripsFromStorage();
   }, []);
 
   return (
