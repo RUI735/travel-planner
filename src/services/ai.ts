@@ -1,6 +1,6 @@
 // src/services/ai.ts
 import OpenAI from 'openai';
-import { Trip, Day, SpotReminder, Spot, Weather } from '../types/trip';
+import { Trip, Day, SpotReminder, Spot, Weather, TripPlan } from '../types/trip';
 import Constants from 'expo-constants';
 import { fetchWeather, getWeatherHint, checkWeatherAlert } from './weather';
 import { geocodeSpot } from './map';
@@ -15,31 +15,38 @@ const SYSTEM_PROMPT = `You are a professional travel planner. Generate detailed,
 
 Return ONLY valid JSON matching this structure:
 {
-  "days": [
+  "plans": [
     {
-      "date": "YYYY-MM-DD",
-      "weatherNote": "今日晴好适合户外，优先西湖骑行和雷峰塔观景",
-      "budgetNote": "门票约 ¥120 + 交通约 ¥30 + 餐饮约 ¥80，人均约 ¥230",
-      "structuredBudget": {
-        "ticketCost": 120,
-        "transportCost": 30,
-        "diningCost": 80,
-        "perPersonCost": 230
-      },
-      "spots": [
+      "strategy": "standard",
+      "label": "经典版",
+      "changeNote": "",
+      "days": [
         {
-          "name": "Attraction name",
-          "lat": 39.9042,
-          "lng": 116.4074,
-          "order": 1,
-          "reminders": [
-            { "type": "openingHours", "label": "开放时间", "content": "09:00-17:00" },
-            { "type": "closedDay", "label": "闭馆日", "content": "周一闭馆" },
-            { "type": "idRequired", "label": "证件要求", "content": "需携带学生证" },
-            { "type": "reservation", "label": "预约方式", "content": "微信公众号提前1天预约" },
-            { "type": "studentDiscount", "label": "学生优惠", "content": "持学生证半价，全日制本科及以下" }
-          ],
-          "notes": ""
+          "date": "YYYY-MM-DD",
+          "weatherNote": "今日晴好适合户外，优先西湖骑行和雷峰塔观景",
+          "budgetNote": "门票约 ¥120 + 交通约 ¥30 + 餐饮约 ¥80，人均约 ¥230",
+          "structuredBudget": {
+            "ticketCost": 120,
+            "transportCost": 30,
+            "diningCost": 80,
+            "perPersonCost": 230
+          },
+          "spots": [
+            {
+              "name": "Attraction name",
+              "lat": 39.9042,
+              "lng": 116.4074,
+              "order": 1,
+              "reminders": [
+                { "type": "openingHours", "label": "开放时间", "content": "09:00-17:00" },
+                { "type": "closedDay", "label": "闭馆日", "content": "周一闭馆" },
+                { "type": "idRequired", "label": "证件要求", "content": "需携带学生证" },
+                { "type": "reservation", "label": "预约方式", "content": "微信公众号提前1天预约" },
+                { "type": "studentDiscount", "label": "学生优惠", "content": "持学生证半价，全日制本科及以下" }
+              ],
+              "notes": ""
+            }
+          ]
         }
       ]
     }
@@ -66,6 +73,15 @@ Student Discount Annotation Rules:
 - For each spot, if student tickets or discounts are realistically available, include a studentDiscount reminder: { "type": "studentDiscount", "label": "学生优惠", "content": "持学生证半价/具体优惠" }
 - Common student discount patterns in China: scenic spots often offer half-price with student ID (全日制本科及以下), museums sometimes free for students, some attractions require both student ID AND age under 24
 - When the "学生优惠" preference is selected, also look for student-friendly dining spots near universities or affordable local eats`;
+
+const WEATHER_ADAPTIVE_DIFF_RULE = `
+IMPORTANT — You are generating TWO plans because the forecast shows bad weather:
+- Plan 1 (strategy: "standard", label: "经典版"): Plan as if weather is fine. Keep outdoor spots (beaches, parks, viewpoints, hikes) in the itinerary.
+- Plan 2 (strategy: "weather_adaptive", label: "天气友好版"): On days with rain/overcast/snow, reduce outdoor spots and replace with indoor alternatives (museums, galleries, shopping areas, indoor attractions). Keep the same number of spots per day.
+
+For Plan 2's "changeNote", write a concise summary of what was changed vs Plan 1. Format: "月/日 天气：原景点→替换景点". Example: "6/10中雨：海边骑行→海洋馆，山顶日落→城市观景厅". Keep it under 100 characters.
+
+Both plans should be equally practical and well-structured. Do NOT mark Plan 2 as inferior — it should be a genuine weather-safe alternative.`;
 
 export interface GenerateTripInput {
   destination: string;
@@ -99,6 +115,7 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
 
   // ---- Fetch real weather forecast ----
   let weatherSection = '';
+  let hasBadWeather = false;
   const fetchedWeatherMap = new Map<string, Weather>();
   try {
     const geo = await geocodeSpot(input.destination, input.destination);
@@ -120,16 +137,19 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
             w.condition === 'fog' ? '雾' :
             w.condition === 'typhoon' ? '台风' : '晴';
           const hint = getWeatherHint(w);
+          const isBad = ['heavy_rain', 'moderate_rain', 'light_rain', 'overcast', 'snow', 'typhoon', 'fog'].includes(w.condition);
           return {
             date,
             text: `${condLabel}, ${w.lowTemp}°C-${w.highTemp}°C, 降水概率${w.precipitation}%. ${hint}`,
             weather: w,
+            isBad,
           };
         })
       );
 
       for (const f of forecasts) {
         if (f.weather) fetchedWeatherMap.set(f.date, f.weather);
+        if (f.isBad) hasBadWeather = true;
       }
 
       const lines = forecasts.map((f) =>
@@ -141,20 +161,29 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
     console.warn('Weather fetch failed, proceeding without forecast:', err);
   }
 
+  // ---- Build prompt ----
+  const multiPlanInstruction = hasBadWeather
+    ? `\nIMPORTANT: The forecast shows bad weather on some days. Generate TWO plans:\n${WEATHER_ADAPTIVE_DIFF_RULE}\n`
+    : '\nGenerate ONE plan (strategy: "standard", label: "经典版", changeNote: "").\n';
+
+  const systemPrompt = hasBadWeather
+    ? SYSTEM_PROMPT + '\n' + WEATHER_ADAPTIVE_DIFF_RULE
+    : SYSTEM_PROMPT;
+
   const userMessage = `Plan a trip to ${input.destination}.
 Dates: ${input.startDate} to ${input.endDate} (${days.length} days).
 ${partyNote}
 ${budgetNote}
 ${prefs}
 ${studentNote}
-Max ${input.maxSpotsPerDay} spots per day.${weatherSection}`;
+Max ${input.maxSpotsPerDay} spots per day.${weatherSection}${multiPlanInstruction}`;
 
   let response;
   try {
     response = await client.chat.completions.create({
       model: 'deepseek-chat',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
       response_format: { type: 'json_object' },
@@ -177,36 +206,50 @@ Max ${input.maxSpotsPerDay} spots per day.${weatherSection}`;
     throw new Error(err.message || '生成失败，请稍后重试');
   }
 
-  const tripDays: Day[] = parsed.days.map((d: any, i: number) => {
-    const date = d.date ?? days[i];
-    const weather = fetchedWeatherMap.get(date) ?? null;
-    const spots: Spot[] = (d.spots ?? []).map((s: any, j: number) => ({
-      id: `spot-${i}-${j}-${Date.now()}`,
-      name: s.name,
-      lat: s.lat,
-      lng: s.lng,
-      order: s.order ?? j + 1,
-      reminders: (s.reminders ?? []) as SpotReminder[],
-      notes: s.notes ?? '',
-    }));
-    const weatherAlert = weather ? checkWeatherAlert(weather, spots) : null;
+  // Parse plans from response (backward compat: if AI returned "days" at top level, wrap it)
+  const rawPlans: any[] = parsed.plans ?? [{ strategy: 'standard', label: '经典版', changeNote: '', days: parsed.days ?? [] }];
+
+  const tripPlans: TripPlan[] = rawPlans.map((p: any, pi: number) => {
+    const planId = `plan-${pi}-${Date.now()}`;
+    const planDays: Day[] = (p.days ?? []).map((d: any, i: number) => {
+      const date = d.date ?? days[i];
+      const weather = fetchedWeatherMap.get(date) ?? null;
+      const spots: Spot[] = (d.spots ?? []).map((s: any, j: number) => ({
+        id: `spot-${pi}-${i}-${j}-${Date.now()}`,
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+        order: s.order ?? j + 1,
+        reminders: (s.reminders ?? []) as SpotReminder[],
+        notes: s.notes ?? '',
+      }));
+      const weatherAlert = weather ? checkWeatherAlert(weather, spots) : null;
+
+      return {
+        date,
+        weather,
+        weatherAlert,
+        weatherNote: d.weatherNote ?? null,
+        budgetNote: d.budgetNote ?? null,
+        structuredBudget: d.structuredBudget
+          ? {
+              ticketCost: Number(d.structuredBudget.ticketCost) || 0,
+              transportCost: Number(d.structuredBudget.transportCost) || 0,
+              diningCost: Number(d.structuredBudget.diningCost) || 0,
+              perPersonCost: Number(d.structuredBudget.perPersonCost) || 0,
+            }
+          : null,
+        spots,
+        routes: [],
+      };
+    });
 
     return {
-      date,
-      weather,
-      weatherAlert,
-      weatherNote: d.weatherNote ?? null,
-      budgetNote: d.budgetNote ?? null,
-      structuredBudget: d.structuredBudget
-        ? {
-            ticketCost: Number(d.structuredBudget.ticketCost) || 0,
-            transportCost: Number(d.structuredBudget.transportCost) || 0,
-            diningCost: Number(d.structuredBudget.diningCost) || 0,
-            perPersonCost: Number(d.structuredBudget.perPersonCost) || 0,
-          }
-        : null,
-      spots,
-      routes: [],
+      id: planId,
+      strategy: p.strategy ?? 'standard',
+      label: p.label ?? (pi === 0 ? '经典版' : '天气友好版'),
+      changeNote: p.changeNote ?? '',
+      days: planDays,
     };
   });
 
@@ -219,7 +262,8 @@ Max ${input.maxSpotsPerDay} spots per day.${weatherSection}`;
     partySize: input.partySize,
     budgetTier: input.budgetTier,
     hotel: null,
-    days: tripDays,
+    plans: tripPlans,
+    activePlanId: tripPlans[0]?.id ?? null,
   };
 }
 

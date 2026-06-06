@@ -61,5 +61,23 @@ function migrateTrip(trip: Trip): Trip {
   if (trip.budgetTier === undefined) {
     trip.budgetTier = null;
   }
+  // Migration: wrap old top-level "days" into a single TripPlan
+  if ((trip as any).days && (!trip.plans || trip.plans.length === 0)) {
+    const legacyDays = (trip as any).days;
+    trip.plans = [
+      {
+        id: `plan-legacy-${Date.now()}`,
+        strategy: 'standard',
+        label: '经典版',
+        changeNote: '',
+        days: legacyDays,
+      },
+    ];
+    delete (trip as any).days;
+  }
+  // Migration: ensure activePlanId is set
+  if (!trip.activePlanId && trip.plans.length > 0) {
+    trip.activePlanId = trip.plans[0].id;
+  }
   return trip;
 }

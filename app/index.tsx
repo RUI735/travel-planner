@@ -2,6 +2,7 @@ import { View, FlatList, TouchableOpacity, Text, StyleSheet, ScrollView, Alert }
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useTripStore } from '../src/store/useTripStore';
+import { getActiveDays } from '../src/types/trip';
 import TripCard from '../src/components/TripCard';
 import BudgetSummary from '../src/components/BudgetSummary';
 import EmptyState from '../src/components/EmptyState';
@@ -109,12 +110,14 @@ export default function HomeScreen() {
         ))}
       </ScrollView>
 
-      {currentTrip && (
+      {currentTrip && (() => {
+        const activeDays = getActiveDays(currentTrip);
+        return (
         <>
           <View style={styles.header}>
             <Text style={styles.destination}>{currentTrip.destination}</Text>
             <Text style={styles.dateRange}>
-              {currentTrip.startDate} - {currentTrip.endDate} · {currentTrip.days.length}天{currentTrip.days.length - 1}晚
+              {currentTrip.startDate} - {currentTrip.endDate} · {activeDays.length}天{activeDays.length - 1}晚
             </Text>
             {metaParts.length > 0 && (
               <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
@@ -122,12 +125,12 @@ export default function HomeScreen() {
           </View>
 
           <BudgetSummary
-            days={currentTrip.days}
+            days={activeDays}
             partySize={currentTrip.partySize}
           />
 
           <FlatList
-            data={currentTrip.days}
+            data={activeDays}
             keyExtractor={(item) => item.date}
             renderItem={({ item }) => (
               <TripCard
@@ -138,7 +141,8 @@ export default function HomeScreen() {
             contentContainerStyle={styles.list}
           />
         </>
-      )}
+        );
+      })()}
 
       <TouchableOpacity
         style={styles.createButton}

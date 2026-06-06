@@ -80,6 +80,16 @@ export interface Hotel {
   lng: number;
 }
 
+export type PlanStrategy = 'standard' | 'weather_adaptive';
+
+export interface TripPlan {
+  id: string;
+  strategy: PlanStrategy;
+  label: string;
+  changeNote: string; // e.g. "6/10中雨：海边→海洋馆，观景台→城市展厅"
+  days: Day[];
+}
+
 export interface Trip {
   id: string;
   destination: string;
@@ -90,9 +100,16 @@ export interface Trip {
   partySize: number;
   budgetTier: string | null;
   hotel: Hotel | null;
-  days: Day[];
+  plans: TripPlan[];
+  activePlanId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Convenience: get days of the active plan (or empty if none) */
+export function getActiveDays(trip: Trip): Day[] {
+  const plan = trip.plans.find((p) => p.id === trip.activePlanId);
+  return plan?.days ?? (trip.plans[0]?.days ?? []);
 }
 
 export type TripStatus = 'empty' | 'generating' | 'ready' | 'modified' | 'error';

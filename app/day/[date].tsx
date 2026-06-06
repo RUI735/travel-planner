@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTripStore } from '../../src/store/useTripStore';
-import { Day, Spot } from '../../src/types/trip';
+import { Day, Spot, getActiveDays } from '../../src/types/trip';
 import { fetchWeather, checkWeatherAlert } from '../../src/services/weather';
 import { calculateAllRoutes, checkRouteOptimality, searchPOI, POIResult } from '../../src/services/map';
 import WeatherBanner from '../../src/components/WeatherBanner';
@@ -24,6 +24,7 @@ export default function DayDetailScreen() {
   const addSpotToDay = useTripStore((s) => s.addSpot);
   const updateSpotNotes = useTripStore((s) => s.updateSpotNotes);
   const reorderSpots = useTripStore((s) => s.reorderSpots);
+  const setActivePlan = useTripStore((s) => s.setActivePlan);
   const [loading, setLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +83,7 @@ export default function DayDetailScreen() {
     addSpotToDay(date, newSpot);
 
     // Recalculate routes
-    const updatedDay = useTripStore.getState().currentTrip?.days.find((d) => d.date === date);
+    const updatedDay = getActiveDays(useTripStore.getState().currentTrip!).find((d) => d.date === date);
     if (updatedDay && updatedDay.spots.length >= 2) {
       const routes = await calculateAllRoutes(updatedDay.spots);
       const checked = checkRouteOptimality(routes);
@@ -95,11 +96,12 @@ export default function DayDetailScreen() {
     setShowSearch(false);
   }
 
-  const day: Day | undefined = currentTrip?.days.find((d) => d.date === date);
-  const dayIndex = currentTrip?.days.findIndex((d) => d.date === date) ?? -1;
-  const totalDays = currentTrip?.days.length ?? 0;
-  const prevDate = dayIndex > 0 ? currentTrip!.days[dayIndex - 1].date : null;
-  const nextDate = dayIndex < totalDays - 1 ? currentTrip!.days[dayIndex + 1].date : null;
+  const activeDays = currentTrip ? getActiveDays(currentTrip) : [];
+  const day: Day | undefined = activeDays.find((d) => d.date === date);
+  const dayIndex = activeDays.findIndex((d) => d.date === date);
+  const totalDays = activeDays.length;
+  const prevDate = dayIndex > 0 ? activeDays[dayIndex - 1].date : null;
+  const nextDate = dayIndex < totalDays - 1 ? activeDays[dayIndex + 1].date : null;
 
   useEffect(() => {
     if (!day || !currentTrip) return;
@@ -171,6 +173,45 @@ export default function DayDetailScreen() {
           </TouchableOpacity>
         ) : <View />}
       </View>
+
+      {/* Plan switcher — only shown when there are 2+ plans */}
+      {currentTrip && currentTrip.plans.length > 1 && (
+        <View style={styles.planSwitcher}>
+          {currentTrip.plans.map((plan) => (
+            <TouchableOpacity
+              key={plan.id}
+              style={[
+                styles.planTab,
+                plan.id === currentTrip.activePlanId && styles.planTabActive,
+              ]}
+              onPress={() => setActivePlan(plan.id)}
+            >
+              <Text
+                style={[
+                  styles.planTabText,
+                  plan.id === currentTrip.activePlanId && styles.planTabTextActive,
+                ]}
+              >
+                {plan.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Change note — show what differs in weather adaptive plan */}
+      {(() => {
+        const activePlan = currentTrip?.plans.find((p) => p.id === currentTrip?.activePlanId);
+        if (activePlan?.changeNote) {
+          return (
+            <View style={styles.changeNoteBanner}>
+              <Text style={styles.changeNoteIcon}>🔄</Text>
+              <Text style={styles.changeNoteText}>{activePlan.changeNote}</Text>
+            </View>
+          );
+        }
+        return null;
+      })()}
 
       {day.weather && (
         <WeatherBanner
@@ -405,6 +446,30 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   noResult: { padding: Spacing.lg, textAlign: 'center', color: Colors.textSecondary, fontSize: FontSize.sm },
+  planSwitcher: { flexDirection: 'row', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, backgroundColor: Colors.white, gap: Spacing.sm },
+  planTab: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.textMuted,
+    alignItems: 'center',
+  },
+  planTabActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  planTabText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '500' },
+  planTabTextActive: { color: Colors.primary, fontWeight: '700' },
+  changeNoteBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    margin: Spacing.md,
+    marginBottom: 0,
+    padding: Spacing.md,
+    backgroundColor: '#FFF8E1',
+    borderRadius: Radius.md,
+    gap: Spacing.sm,
+  },
+  changeNoteIcon: { fontSize: 14 },
+  changeNoteText: { fontSize: FontSize.xs, color: '#5D4E37', flex: 1, lineHeight: 18 },
   dayNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.primaryLight },
   dayNavArrow: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
   dayNavCenter: { alignItems: 'center' },

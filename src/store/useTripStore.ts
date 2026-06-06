@@ -8,10 +8,23 @@ function deriveCurrentTrip(trips: Trip[], activeTripId: string | null): Trip | n
   return trips.find((t) => t.id === activeTripId) ?? null;
 }
 
+/** Mutate the active plan's days inside a trip, returning the updated trip and plan */
+function updateActivePlanDays(
+  trip: Trip,
+  mutateDays: (days: Day[]) => Day[]
+): Trip | null {
+  const plan = trip.plans.find((p) => p.id === trip.activePlanId);
+  if (!plan) return null;
+  const updatedPlan = { ...plan, days: mutateDays(plan.days) };
+  const plans = trip.plans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p));
+  return { ...trip, plans, updatedAt: new Date().toISOString() };
+}
+
 interface TripStore extends TripState {
   loadTripsFromStorage: () => Promise<void>;
   addTrip: (trip: Trip) => void;
   setActiveTrip: (id: string) => void;
+  setActivePlan: (planId: string) => void;
   removeTrip: (id: string) => void;
   updateDay: (date: string, updater: (day: Day) => Day) => void;
   setStatus: (status: TripStatus, errorMessage?: string) => void;
@@ -33,6 +46,10 @@ export const useTripStore = create<TripStore>((set, get) => ({
       const trips = await loadTrips();
       if (trips.length > 0) {
         const activeTripId = trips[0].id;
+        // Ensure activePlanId is set (migration: old trips may have null)
+        if (!trips[0].activePlanId && trips[0].plans.length > 0) {
+          trips[0].activePlanId = trips[0].plans[0].id;
+        }
         set({
           trips,
           activeTripId,
@@ -69,6 +86,18 @@ export const useTripStore = create<TripStore>((set, get) => ({
     }
   },
 
+  setActivePlan: (planId: string) => {
+    set((state) => {
+      if (!state.currentTrip) return state;
+      const plan = state.currentTrip.plans.find((p) => p.id === planId);
+      if (!plan) return state;
+      const updatedTrip = { ...state.currentTrip, activePlanId: planId };
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
+      return { currentTrip: updatedTrip, trips };
+    });
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after setActivePlan:', err));
+  },
+
   removeTrip: (id: string) => {
     set((state) => {
       const trips = state.trips.filter((t) => t.id !== id);
@@ -90,148 +119,107 @@ export const useTripStore = create<TripStore>((set, get) => ({
     set({ status, errorMessage: errorMessage ?? null });
   },
 
-  updateDay: (date: string, updater: (day: Day) => Day) => {
+  // ---- Day mutations — all operate on the active plan ----
+
+  updateDay: (date, updater) => {
     set((state) => {
       if (!state.currentTrip) return state;
-      const days = state.currentTrip.days.map((d) =>
-        d.date === date ? updater(d) : d
+      const updatedTrip = updateActivePlanDays(state.currentTrip, (days) =>
+        days.map((d) => (d.date === date ? updater(d) : d))
       );
-      const updatedTrip = {
-        ...state.currentTrip,
-        days,
-        updatedAt: new Date().toISOString(),
-      };
-      const trips = state.trips.map((t) =>
-        t.id === updatedTrip.id ? updatedTrip : t
-      );
-      return {
-        currentTrip: updatedTrip,
-        trips,
-      };
+      if (!updatedTrip) return state;
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
+      return { currentTrip: updatedTrip, trips };
     });
-    const state = get();
-    saveTrips(state.trips).catch((err) => {
-      console.error('Failed to persist trip after updateDay:', err);
-      set({ status: 'error', errorMessage: '保存失败' });
-    });
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after updateDay:', err));
   },
 
   addSpot: (date, spot) => {
     set((state) => {
       if (!state.currentTrip) return state;
-      const days = state.currentTrip.days.map((d) =>
-        d.date === date
-          ? { ...d, spots: [...d.spots, { ...spot, order: d.spots.length + 1 }] }
-          : d
+      const updatedTrip = updateActivePlanDays(state.currentTrip, (days) =>
+        days.map((d) =>
+          d.date === date
+            ? { ...d, spots: [...d.spots, { ...spot, order: d.spots.length + 1 }] }
+            : d
+        )
       );
-      const updatedTrip = {
-        ...state.currentTrip,
-        days,
-        updatedAt: new Date().toISOString(),
-      };
-      const trips = state.trips.map((t) =>
-        t.id === updatedTrip.id ? updatedTrip : t
-      );
+      if (!updatedTrip) return state;
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
       return { currentTrip: updatedTrip, trips };
     });
-    const state = get();
-    saveTrips(state.trips).catch((err) =>
-      console.error('Failed to save after addSpot:', err)
-    );
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after addSpot:', err));
   },
 
   removeSpot: (date, spotId) => {
     set((state) => {
       if (!state.currentTrip) return state;
-      const days = state.currentTrip.days.map((d) =>
-        d.date === date
-          ? {
-              ...d,
-              spots: d.spots
-                .filter((s) => s.id !== spotId)
-                .map((s, i) => ({ ...s, order: i + 1 })),
-            }
-          : d
+      const updatedTrip = updateActivePlanDays(state.currentTrip, (days) =>
+        days.map((d) =>
+          d.date === date
+            ? {
+                ...d,
+                spots: d.spots
+                  .filter((s) => s.id !== spotId)
+                  .map((s, i) => ({ ...s, order: i + 1 })),
+              }
+            : d
+        )
       );
-      const updatedTrip = {
-        ...state.currentTrip,
-        days,
-        updatedAt: new Date().toISOString(),
-      };
-      const trips = state.trips.map((t) =>
-        t.id === updatedTrip.id ? updatedTrip : t
-      );
+      if (!updatedTrip) return state;
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
       return { currentTrip: updatedTrip, trips };
     });
-    const state = get();
-    saveTrips(state.trips).catch((err) =>
-      console.error('Failed to save after removeSpot:', err)
-    );
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after removeSpot:', err));
   },
 
   reorderSpots: (date, spotIds) => {
     set((state) => {
       if (!state.currentTrip) return state;
-      const spotMap = new Map(
-        state.currentTrip.days
-          .find((d) => d.date === date)
-          ?.spots.map((s) => [s.id, s]) ?? []
-      );
-      const days = state.currentTrip.days.map((d) =>
-        d.date === date
-          ? {
-              ...d,
-              spots: spotIds
-                .map((id, i) => {
-                  const spot = spotMap.get(id);
-                  return spot ? { ...spot, order: i + 1 } : null;
-                })
-                .filter(Boolean) as Spot[],
-            }
-          : d
-      );
-      const updatedTrip = {
-        ...state.currentTrip,
-        days,
-        updatedAt: new Date().toISOString(),
-      };
-      const trips = state.trips.map((t) =>
-        t.id === updatedTrip.id ? updatedTrip : t
-      );
+      const updatedTrip = updateActivePlanDays(state.currentTrip, (days) => {
+        const day = days.find((d) => d.date === date);
+        if (!day) return days;
+        const spotMap = new Map(day.spots.map((s) => [s.id, s]));
+        return days.map((d) =>
+          d.date === date
+            ? {
+                ...d,
+                spots: spotIds
+                  .map((id, i) => {
+                    const spot = spotMap.get(id);
+                    return spot ? { ...spot, order: i + 1 } : null;
+                  })
+                  .filter(Boolean) as Spot[],
+              }
+            : d
+        );
+      });
+      if (!updatedTrip) return state;
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
       return { currentTrip: updatedTrip, trips };
     });
-    const state = get();
-    saveTrips(state.trips).catch((err) =>
-      console.error('Failed to save after reorderSpots:', err)
-    );
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after reorderSpots:', err));
   },
 
   updateSpotNotes: (date, spotId, notes) => {
     set((state) => {
       if (!state.currentTrip) return state;
-      const days = state.currentTrip.days.map((d) =>
-        d.date === date
-          ? {
-              ...d,
-              spots: d.spots.map((s) =>
-                s.id === spotId ? { ...s, notes } : s
-              ),
-            }
-          : d
+      const updatedTrip = updateActivePlanDays(state.currentTrip, (days) =>
+        days.map((d) =>
+          d.date === date
+            ? {
+                ...d,
+                spots: d.spots.map((s) =>
+                  s.id === spotId ? { ...s, notes } : s
+                ),
+              }
+            : d
+        )
       );
-      const updatedTrip = {
-        ...state.currentTrip,
-        days,
-        updatedAt: new Date().toISOString(),
-      };
-      const trips = state.trips.map((t) =>
-        t.id === updatedTrip.id ? updatedTrip : t
-      );
+      if (!updatedTrip) return state;
+      const trips = state.trips.map((t) => (t.id === updatedTrip.id ? updatedTrip : t));
       return { currentTrip: updatedTrip, trips };
     });
-    const state = get();
-    saveTrips(state.trips).catch((err) =>
-      console.error('Failed to save after updateSpotNotes:', err)
-    );
+    saveTrips(get().trips).catch((err) => console.error('Failed to save after updateSpotNotes:', err));
   },
 }));
