@@ -80,6 +80,8 @@ export interface Hotel {
   lng: number;
 }
 
+export type Pace = 'relaxed' | 'balanced' | 'intensive';
+
 export type PlanStrategy = 'standard' | 'weather_adaptive';
 
 export interface TripPlan {
@@ -99,6 +101,7 @@ export interface Trip {
   isStudent: boolean;
   partySize: number;
   budgetTier: string | null;
+  pace: Pace | null;
   hotel: Hotel | null;
   plans: TripPlan[];
   activePlanId: string | null;

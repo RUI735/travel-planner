@@ -92,6 +92,7 @@ export interface GenerateTripInput {
   isStudent: boolean;
   partySize: number;
   budgetTier: string | null;
+  pace: string | null;
 }
 
 export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>> {
@@ -112,6 +113,13 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
     luxury: 'Budget: luxury (轻奢型) — prioritize quality experiences, fine dining, convenient transit.',
   };
   const budgetNote = input.budgetTier ? budgetLabels[input.budgetTier] ?? '' : '';
+
+  const paceLabels: Record<string, string> = {
+    relaxed: 'Pace: relaxed (休闲慢游) — 2-3 spots per day, deep experience, ample rest between spots.',
+    balanced: 'Pace: balanced (经典均衡) — 3-4 spots per day, balanced tempo.',
+    intensive: 'Pace: intensive (特种兵) — 4-5 spots per day, efficient coverage, tight connections.',
+  };
+  const paceNote = input.pace ? paceLabels[input.pace] ?? '' : paceLabels.balanced;
 
   // ---- Fetch real weather forecast ----
   let weatherSection = '';
@@ -174,9 +182,10 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
 Dates: ${input.startDate} to ${input.endDate} (${days.length} days).
 ${partyNote}
 ${budgetNote}
+${paceNote}
 ${prefs}
 ${studentNote}
-Max ${input.maxSpotsPerDay} spots per day.${weatherSection}${multiPlanInstruction}`;
+${weatherSection}${multiPlanInstruction}`;
 
   let response;
   try {
@@ -262,6 +271,7 @@ Max ${input.maxSpotsPerDay} spots per day.${weatherSection}${multiPlanInstructio
     partySize: input.partySize,
     budgetTier: input.budgetTier,
     hotel: null,
+    pace: (input.pace as 'relaxed' | 'balanced' | 'intensive' | null) ?? null,
     plans: tripPlans,
     activePlanId: tripPlans[0]?.id ?? null,
   };

@@ -61,6 +61,10 @@ function migrateTrip(trip: Trip): Trip {
   if (trip.budgetTier === undefined) {
     trip.budgetTier = null;
   }
+  // Migration: default pace to null (balanced) for old trips
+  if (trip.pace === undefined) {
+    trip.pace = null;
+  }
   // Migration: wrap old top-level "days" into a single TripPlan
   if ((trip as any).days && (!trip.plans || trip.plans.length === 0)) {
     const legacyDays = (trip as any).days;

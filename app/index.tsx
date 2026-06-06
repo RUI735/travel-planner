@@ -13,6 +13,11 @@ const BUDGET_LABELS: Record<string, string> = {
   comfort: '舒适型',
   luxury: '轻奢型',
 };
+const PACE_LABELS: Record<string, string> = {
+  relaxed: '休闲慢游',
+  balanced: '经典均衡',
+  intensive: '特种兵',
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -48,6 +53,9 @@ export default function HomeScreen() {
   const metaParts: string[] = [];
   if (currentTrip) {
     metaParts.push(`👥 ${currentTrip.partySize}人`);
+    if (currentTrip.pace) {
+      metaParts.push(`🚶 ${PACE_LABELS[currentTrip.pace] ?? currentTrip.pace}`);
+    }
     if (currentTrip.budgetTier) {
       metaParts.push(`💰 ${BUDGET_LABELS[currentTrip.budgetTier] ?? currentTrip.budgetTier}`);
     }

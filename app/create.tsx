@@ -4,12 +4,19 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useRouter } from 'expo-router';
 import { useTripStore } from '../src/store/useTripStore';
 import { generateTrip } from '../src/services/ai';
-import { Trip, Hotel } from '../src/types/trip';
+import { Trip, Hotel, Pace } from '../src/types/trip';
 import { searchPOI, POIResult, calculateTripRoutes } from '../src/services/map';
 import LoadingOverlay from '../src/components/LoadingOverlay';
 import { Colors, FontSize, Radius, Spacing } from '../src/theme';
 
-const PREFERENCES = ['美食', '人文', '自然', '打卡拍照', '悠闲', '学生优惠', '购物', '夜生活', '小众秘境', '历史古迹', '户外运动', '文艺展览'];
+const PACE_OPTIONS: { key: Pace; label: string; desc: string }[] = [
+  { key: 'relaxed', label: '🏖️ 休闲慢游', desc: '每天2-3个' },
+  { key: 'balanced', label: '🚶 经典均衡', desc: '每天3-4个' },
+  { key: 'intensive', label: '🏃 特种兵', desc: '每天4-5个' },
+];
+const PACE_SPOTS: Record<Pace, number> = { relaxed: 3, balanced: 4, intensive: 5 };
+const INTEREST_TAGS = ['美食', '人文历史', '自然风光', '拍照打卡', '文艺展览', '购物', '夜生活', '小众秘境'];
+const PRACTICAL_TAGS = ['学生优惠'];
 const BUDGET_TIERS = [
   { key: 'economy', label: '💰 经济' },
   { key: 'comfort', label: '💵 舒适' },
@@ -24,6 +31,7 @@ export default function CreateScreen() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedPrefs, setSelectedPrefs] = useState<string[]>([]);
+  const [pace, setPace] = useState<Pace | null>(null);
   const [partySize, setPartySize] = useState(2);
   const [budgetTier, setBudgetTier] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -122,10 +130,11 @@ export default function CreateScreen() {
         startDate,
         endDate,
         preferences: selectedPrefs,
-        maxSpotsPerDay: 4,
+        maxSpotsPerDay: pace ? PACE_SPOTS[pace] ?? 4 : 4,
         isStudent: student,
         partySize,
         budgetTier,
+        pace,
       });
 
       let trip: Trip = {
@@ -134,6 +143,7 @@ export default function CreateScreen() {
         isStudent: student,
         partySize,
         budgetTier,
+        pace,
         hotel,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -282,16 +292,52 @@ export default function CreateScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>偏好（可选）</Text>
-        <View style={styles.prefRow}>
-          {PREFERENCES.map((pref) => (
+        {/* ---- 旅行节奏 ---- */}
+        <Text style={styles.label}>旅行节奏</Text>
+        <View style={styles.paceRow}>
+          {PACE_OPTIONS.map((opt) => (
             <TouchableOpacity
-              key={pref}
-              style={[styles.prefChip, selectedPrefs.includes(pref) && styles.prefChipActive]}
-              onPress={() => togglePref(pref)}
+              key={opt.key}
+              style={[styles.paceCard, pace === opt.key && styles.paceCardActive]}
+              onPress={() => setPace(pace === opt.key ? null : opt.key)}
             >
-              <Text style={[styles.prefText, selectedPrefs.includes(pref) && styles.prefTextActive]}>
-                {pref}
+              <Text style={[styles.paceLabel, pace === opt.key && styles.paceLabelActive]}>
+                {opt.label}
+              </Text>
+              <Text style={[styles.paceDesc, pace === opt.key && styles.paceDescActive]}>
+                {opt.desc}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ---- 兴趣偏好 ---- */}
+        <Text style={styles.label}>兴趣偏好（多选）</Text>
+        <View style={styles.prefRow}>
+          {INTEREST_TAGS.map((tag) => (
+            <TouchableOpacity
+              key={tag}
+              style={[styles.prefChip, selectedPrefs.includes(tag) && styles.prefChipActive]}
+              onPress={() => togglePref(tag)}
+            >
+              <Text style={[styles.prefText, selectedPrefs.includes(tag) && styles.prefTextActive]}>
+                {tag}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ---- 实用标签 ---- */}
+        <Text style={styles.label}>实用标签</Text>
+        <View style={styles.prefRow}>
+          {PRACTICAL_TAGS.map((tag) => (
+            <TouchableOpacity
+              key={tag}
+              style={[styles.prefChip, selectedPrefs.includes(tag) && styles.prefChipActive]}
+              onPress={() => togglePref(tag)}
+            >
+              <Text style={[styles.prefText, selectedPrefs.includes(tag) && styles.prefTextActive]}>
+                🎓 {tag}
               </Text>
             </TouchableOpacity>
           ))}
@@ -374,6 +420,21 @@ const styles = StyleSheet.create({
   inputError: { borderColor: Colors.error },
   error: { color: Colors.error, fontSize: FontSize.xs, marginTop: Spacing.xs },
   prefRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.xs },
+  paceRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  paceCard: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.textMuted,
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  paceCardActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  paceLabel: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.text, marginBottom: 4 },
+  paceLabelActive: { color: Colors.primary },
+  paceDesc: { fontSize: FontSize.xs, color: Colors.textMuted },
+  paceDescActive: { color: Colors.primary },
   prefChip: {
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.textMuted,
