@@ -71,6 +71,7 @@ export interface Day {
   routes: RouteSegment[];
   budgetNote: string | null;
   structuredBudget: DayBudget | null;
+  weatherNote: string | null;
 }
 
 export interface Hotel {
