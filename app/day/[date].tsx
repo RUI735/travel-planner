@@ -105,16 +105,25 @@ export default function DayDetailScreen() {
     if (!day || !currentTrip) return;
 
     async function loadWeatherAndRoutes() {
-      setLoading(true);
-      try {
+      // Weather: reuse from generation if available, otherwise fetch as fallback
+      const hasWeather = day!.weather && day!.weather.highTemp !== -999;
+      if (!hasWeather) {
         const firstSpot = day!.spots[0];
         if (firstSpot) {
-          const weather = await fetchWeather(firstSpot.lat, firstSpot.lng, day!.date, destination);
-          const alert = checkWeatherAlert(weather, day!.spots);
-          updateDay(day!.date, (d) => ({ ...d, weather, weatherAlert: alert }));
+          try {
+            const weather = await fetchWeather(firstSpot.lat, firstSpot.lng, day!.date, destination);
+            const alert = checkWeatherAlert(weather, day!.spots);
+            updateDay(day!.date, (d) => ({ ...d, weather, weatherAlert: alert }));
+          } catch {
+            // Weather fetch failure is non-blocking
+          }
         }
+      }
 
-        if (day!.spots.length >= 1) {
+      // Routes: calculate if needed
+      if (day!.spots.length >= 1) {
+        setLoading(true);
+        try {
           const allPoints = hotelSpot
             ? [hotelSpot, ...day!.spots, hotelSpot]
             : day!.spots;
@@ -123,11 +132,11 @@ export default function DayDetailScreen() {
             const checked = checkRouteOptimality(routes);
             updateDay(day!.date, (d) => ({ ...d, routes: checked }));
           }
+        } catch {
+          // Route calc failure is non-blocking
+        } finally {
+          setLoading(false);
         }
-      } catch {
-        // Weather/map failure is non-blocking
-      } finally {
-        setLoading(false);
       }
     }
 
