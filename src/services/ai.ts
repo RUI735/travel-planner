@@ -177,20 +177,10 @@ Max ${input.maxSpotsPerDay} spots per day.${weatherSection}`;
     throw new Error(err.message || '生成失败，请稍后重试');
   }
 
-  const tripDays: Day[] = parsed.days.map((d: any, i: number) => ({
-    date: d.date ?? days[i],
-    weather: null,
-    weatherAlert: null,
-    budgetNote: d.budgetNote ?? null,
-    structuredBudget: d.structuredBudget
-      ? {
-          ticketCost: Number(d.structuredBudget.ticketCost) || 0,
-          transportCost: Number(d.structuredBudget.transportCost) || 0,
-          diningCost: Number(d.structuredBudget.diningCost) || 0,
-          perPersonCost: Number(d.structuredBudget.perPersonCost) || 0,
-        }
-      : null,
-    spots: (d.spots ?? []).map((s: any, j: number) => ({
+  const tripDays: Day[] = parsed.days.map((d: any, i: number) => {
+    const date = d.date ?? days[i];
+    const weather = fetchedWeatherMap.get(date) ?? null;
+    const spots: Spot[] = (d.spots ?? []).map((s: any, j: number) => ({
       id: `spot-${i}-${j}-${Date.now()}`,
       name: s.name,
       lat: s.lat,
@@ -198,9 +188,27 @@ Max ${input.maxSpotsPerDay} spots per day.${weatherSection}`;
       order: s.order ?? j + 1,
       reminders: (s.reminders ?? []) as SpotReminder[],
       notes: s.notes ?? '',
-    })),
-    routes: [],
-  }));
+    }));
+    const weatherAlert = weather ? checkWeatherAlert(weather, spots) : null;
+
+    return {
+      date,
+      weather,
+      weatherAlert,
+      weatherNote: d.weatherNote ?? null,
+      budgetNote: d.budgetNote ?? null,
+      structuredBudget: d.structuredBudget
+        ? {
+            ticketCost: Number(d.structuredBudget.ticketCost) || 0,
+            transportCost: Number(d.structuredBudget.transportCost) || 0,
+            diningCost: Number(d.structuredBudget.diningCost) || 0,
+            perPersonCost: Number(d.structuredBudget.perPersonCost) || 0,
+          }
+        : null,
+      spots,
+      routes: [],
+    };
+  });
 
   return {
     destination: input.destination,
