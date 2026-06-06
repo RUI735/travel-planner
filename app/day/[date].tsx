@@ -35,6 +35,10 @@ export default function DayDetailScreen() {
 
   // Undo state for spot deletion
   const [pendingDelete, setPendingDelete] = useState<{ spot: Spot; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [editingMeal, setEditingMeal] = useState<string | null>(null);
+  const [mealQuery, setMealQuery] = useState('');
+  const [mealResults, setMealResults] = useState<POIResult[]>([]);
+  const [searchingMeal, setSearchingMeal] = useState(false);
 
   const hotel = currentTrip?.hotel;
 
@@ -48,6 +52,28 @@ export default function DayDetailScreen() {
     if (day?.dayEnd) return day.dayEnd.name;
     if (hotel) return hotel.name;
     return '市中心（默认）';
+  }
+
+  async function handleMealSearch(text: string) {
+    setMealQuery(text);
+    if (text.trim().length < 2) { setMealResults([]); return; }
+    setSearchingMeal(true);
+    const results = await searchPOI(text.trim(), destination);
+    setMealResults(results);
+    setSearchingMeal(false);
+  }
+
+  function handleReplaceMeal(poi: POIResult) {
+    if (!editingMeal || !day) return;
+    const updatedMeals = day.meals.map((m) =>
+      m.type === editingMeal
+        ? { ...m, name: poi.name, lat: poi.lat, lng: poi.lng }
+        : m
+    );
+    updateDay(date, (d) => ({ ...d, meals: updatedMeals }));
+    setEditingMeal(null);
+    setMealQuery('');
+    setMealResults([]);
   }
 
   async function recalcRoutes(spots: Spot[]) {
@@ -287,6 +313,16 @@ export default function DayDetailScreen() {
                 const labels: Record<string, string> = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' };
                 return (
                   <View key={meal.type} style={styles.mealCard}>
+                    <TouchableOpacity
+                      style={styles.mealEditBtn}
+                      onPress={() => {
+                        setEditingMeal(meal.type);
+                        setMealQuery('');
+                        setMealResults([]);
+                      }}
+                    >
+                      <Text style={styles.mealEditText}>✎</Text>
+                    </TouchableOpacity>
                     <Text style={styles.mealIcon}>{icons[meal.type] ?? '🍴'}</Text>
                     <Text style={styles.mealLabel}>{labels[meal.type] ?? meal.type}</Text>
                     <Text style={styles.mealName} numberOfLines={1}>{meal.name}</Text>
@@ -297,6 +333,46 @@ export default function DayDetailScreen() {
                   </View>
                 );
               })}
+          </View>
+        )}
+
+        {/* Meal search overlay */}
+        {editingMeal && (
+          <View style={styles.mealSearchBox}>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder={`搜索${destination}餐厅...`}
+                placeholderTextColor={Colors.textMuted}
+                value={mealQuery}
+                onChangeText={handleMealSearch}
+                autoFocus
+              />
+              <TouchableOpacity
+                onPress={() => { setEditingMeal(null); setMealQuery(''); setMealResults([]); }}
+              >
+                <Text style={styles.cancelText}>取消</Text>
+              </TouchableOpacity>
+            </View>
+            {searchingMeal && (
+              <ActivityIndicator size="small" color={Colors.primary} style={{ padding: Spacing.md }} />
+            )}
+            {mealResults.map((poi, i) => (
+              <TouchableOpacity
+                key={`${poi.name}-${i}`}
+                style={styles.resultRow}
+                onPress={() => handleReplaceMeal(poi)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.resultName}>{poi.name}</Text>
+                  <Text style={styles.resultAddr} numberOfLines={1}>{poi.address}</Text>
+                </View>
+                <Text style={styles.resultAdd}>替换</Text>
+              </TouchableOpacity>
+            ))}
+            {!searchingMeal && mealQuery.length >= 2 && mealResults.length === 0 && (
+              <Text style={styles.noResult}>未找到，换个关键词试试</Text>
+            )}
           </View>
         )}
 
@@ -502,6 +578,16 @@ const styles = StyleSheet.create({
   mealName: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600', textAlign: 'center' },
   mealCuisine: { fontSize: 10, color: Colors.textMuted, marginTop: 1 },
   mealPrice: { fontSize: 10, color: Colors.budgetAccent, fontWeight: '600', marginTop: 2 },
+  mealEditBtn: { position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
+  mealEditText: { fontSize: 10, color: Colors.primary },
+  mealSearchBox: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: Spacing.sm },
   addSection: { padding: Spacing.lg, paddingTop: 0 },
   addButton: {
