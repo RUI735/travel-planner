@@ -203,7 +203,7 @@ export default function DayDetailScreen() {
     }
 
     loadWeatherAndRoutes();
-  }, [date]);
+  }, [date, currentTrip?.activePlanId]);
 
   if (!day) {
     return (
