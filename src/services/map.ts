@@ -79,30 +79,52 @@ export async function calculateRoute(
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.status !== '1') {
-      // Silently return null — status "0" means no key / quota exceeded
-      return null;
+    if (data.status === '1') {
+      const path = data.route?.paths?.[0];
+      if (path) {
+        // Amap returns distance in meters, duration in seconds
+        const distanceKm = Math.round((path.distance / 1000) * 10) / 10;
+        const driveMinutes = Math.round(path.duration / 60);
+        return {
+          fromSpotId: origin.id,
+          toSpotId: destination.id,
+          distanceKm,
+          driveMinutes,
+          transitMinutes: Math.round(driveMinutes * 2.5),
+          isOptimal: true,
+        };
+      }
     }
-
-    const path = data.route?.paths?.[0];
-    if (path) {
-      // Amap returns distance in meters, duration in seconds
-      const distanceKm = Math.round((path.distance / 1000) * 10) / 10;
-      const driveMinutes = Math.round(path.duration / 60);
-      return {
-        fromSpotId: origin.id,
-        toSpotId: destination.id,
-        distanceKm,
-        driveMinutes,
-        transitMinutes: Math.round(driveMinutes * 2.5),
-        isOptimal: true,
-      };
-    }
-    return null;
+    // Fallback: estimate via haversine if API fails
+    return estimateRoute(origin, destination);
   } catch (err) {
-    console.error('calculateRoute: fetch or parse failed', err);
-    return null;
+    console.warn('calculateRoute: API failed, using estimate', err);
+    return estimateRoute(origin, destination);
   }
+}
+
+/** Haversine-based fallback when routing API is unavailable */
+function estimateRoute(origin: Spot, destination: Spot): RouteSegment {
+  const R = 6371; // Earth radius in km
+  const dLat = ((destination.lat - origin.lat) * Math.PI) / 180;
+  const dLng = ((destination.lng - origin.lng) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((origin.lat * Math.PI) / 180) *
+      Math.cos((destination.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distanceKm = Math.round(R * c * 10) / 10 || 0.5;
+  const driveMinutes = Math.max(5, Math.round(distanceKm * 3)); // ~20km/h city avg
+  return {
+    fromSpotId: origin.id,
+    toSpotId: destination.id,
+    distanceKm,
+    driveMinutes,
+    transitMinutes: Math.round(driveMinutes * 2.5),
+    isOptimal: true,
+  };
 }
 
 export async function calculateAllRoutes(spots: Spot[]): Promise<RouteSegment[]> {
@@ -119,6 +141,8 @@ export async function calculateAllRoutes(spots: Spot[]): Promise<RouteSegment[]>
 
   return routes;
 }
+
+export { estimateRoute };
 
 function makePointSpot(point: DayPoint | Hotel, id: string): Spot {
   return {
