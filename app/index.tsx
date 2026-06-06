@@ -121,9 +121,12 @@ export default function HomeScreen() {
               numberOfLines={1}
             >
               {trip.destination}
+              <Text style={styles.tripChipDate}>
+                {' '}{trip.startDate.slice(5).replace('-', '/')}—{trip.endDate.slice(5).replace('-', '/')}
+              </Text>
             </Text>
-            <Text style={styles.tripChipDate} numberOfLines={1}>
-              {trip.startDate.slice(5).replace('-', '/')} — {trip.endDate.slice(5).replace('-', '/')} · {getActiveDays(trip).reduce((sum, d) => sum + d.spots.length, 0)}个景点
+            <Text style={styles.tripChipDate}>
+              {getActiveDays(trip).length}天 · {getActiveDays(trip).reduce((sum, d) => sum + d.spots.length, 0)}个景点
             </Text>
           </TouchableOpacity>
         ))}
@@ -184,7 +187,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   tripSelector: {
-    maxHeight: 72,
+    maxHeight: 80,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.primaryLight,
@@ -201,7 +204,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.textMuted,
     backgroundColor: Colors.white,
-    minWidth: 130,
     alignItems: 'flex-start',
   },
   tripChipActive: {
