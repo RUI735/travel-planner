@@ -236,8 +236,12 @@ export default function DayDetailScreen() {
         ) : <View />}
       </View>
 
-      {/* Plan switcher — only shown when there are 2+ plans */}
-      {currentTrip && currentTrip.plans.length > 1 && (
+      {/* Plan switcher — only shown when there are 2+ plans AND current day has bad weather */}
+      {currentTrip && currentTrip.plans.length > 1 && day && (
+        ['heavy_rain', 'moderate_rain', 'light_rain', 'overcast', 'snow', 'typhoon', 'fog'].includes(
+          day.weather?.condition ?? ''
+        )
+      ) && (
         <View style={styles.planSwitcher}>
           {currentTrip.plans.map((plan) => (
             <TouchableOpacity
@@ -261,8 +265,10 @@ export default function DayDetailScreen() {
         </View>
       )}
 
-      {/* Change note — show what differs in weather adaptive plan */}
+      {/* Change note — only on bad-weather days */}
       {(() => {
+        const isBad = day && ['heavy_rain', 'moderate_rain', 'light_rain', 'overcast', 'snow', 'typhoon', 'fog'].includes(day.weather?.condition ?? '');
+        if (!isBad) return null;
         const activePlan = currentTrip?.plans.find((p) => p.id === currentTrip?.activePlanId);
         if (activePlan?.changeNote) {
           return (
