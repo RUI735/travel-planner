@@ -97,13 +97,57 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
   };
   const budgetNote = input.budgetTier ? budgetLabels[input.budgetTier] ?? '' : '';
 
+  // ---- Fetch real weather forecast ----
+  let weatherSection = '';
+  const fetchedWeatherMap = new Map<string, Weather>();
+  try {
+    const geo = await geocodeSpot(input.destination, input.destination);
+    if (geo) {
+      const forecasts = await Promise.all(
+        days.map(async (date) => {
+          const w = await fetchWeather(geo.lat, geo.lng, date);
+          if (w.highTemp === -999) {
+            return { date, text: null, weather: null as Weather | null };
+          }
+          const condLabel =
+            w.condition === 'sunny' ? '晴' :
+            w.condition === 'cloudy' ? '多云' :
+            w.condition === 'overcast' ? '阴' :
+            w.condition === 'light_rain' ? '小雨' :
+            w.condition === 'moderate_rain' ? '中雨' :
+            w.condition === 'heavy_rain' ? '大雨' :
+            w.condition === 'snow' ? '雪' :
+            w.condition === 'fog' ? '雾' :
+            w.condition === 'typhoon' ? '台风' : '晴';
+          const hint = getWeatherHint(w);
+          return {
+            date,
+            text: `${condLabel}, ${w.lowTemp}°C-${w.highTemp}°C, 降水概率${w.precipitation}%. ${hint}`,
+            weather: w,
+          };
+        })
+      );
+
+      for (const f of forecasts) {
+        if (f.weather) fetchedWeatherMap.set(f.date, f.weather);
+      }
+
+      const lines = forecasts.map((f) =>
+        `  - ${f.date}: ${f.text ?? '预报暂不可用'}`
+      );
+      weatherSection = `\nWeather forecast for ${input.destination} (use this to write weatherNote for each day):\n${lines.join('\n')}\n`;
+    }
+  } catch (err) {
+    console.warn('Weather fetch failed, proceeding without forecast:', err);
+  }
+
   const userMessage = `Plan a trip to ${input.destination}.
 Dates: ${input.startDate} to ${input.endDate} (${days.length} days).
 ${partyNote}
 ${budgetNote}
 ${prefs}
 ${studentNote}
-Max ${input.maxSpotsPerDay} spots per day.`;
+Max ${input.maxSpotsPerDay} spots per day.${weatherSection}`;
 
   let response;
   try {
