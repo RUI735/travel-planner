@@ -8,10 +8,12 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTripStore } from '../src/store/useTripStore';
 import { getActiveDays, Day, Spot } from '../src/types/trip';
+import { geocodeSpot, calculateAllRoutes, checkRouteOptimality } from '../src/services/map';
 import { Colors, FontSize, Radius, Spacing } from '../src/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -46,6 +48,7 @@ export default function OverviewScreen() {
   const reorderSpots = useTripStore((s) => s.reorderSpots);
   const updateDay = useTripStore((s) => s.updateDay);
   const removeSpot = useTripStore((s) => s.removeSpot);
+  const [settingPoint, setSettingPoint] = useState<string | null>(null);
 
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<{
@@ -92,6 +95,42 @@ export default function OverviewScreen() {
     const ids = day.spots.map((s) => s.id);
     [ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
     reorderSpots(date, ids);
+  }
+
+  async function handleQuickSetEnd(date: string, type: 'station' | 'airport') {
+    const dest = currentTrip?.destination ?? '';
+    const keyword = type === 'station' ? `${dest}火车站` : `${dest}机场`;
+    setSettingPoint(date);
+    try {
+      const geo = await geocodeSpot(keyword, dest);
+      const point = geo
+        ? { name: type === 'station' ? `${dest}站` : `${dest}机场`, lat: geo.lat, lng: geo.lng }
+        : { name: type === 'station' ? '火车站' : '机场', lat: 0, lng: 0 };
+      updateDay(date, (d) => ({ ...d, dayEnd: point }));
+
+      // Recalculate routes for this day
+      const trip = useTripStore.getState().currentTrip!;
+      const updatedDay = getActiveDays(trip).find((d) => d.date === date);
+      if (updatedDay && updatedDay.spots.length >= 1) {
+        const startPt = updatedDay.dayStart ?? trip.hotel;
+        const startSpot = startPt ? { id: '__start__', name: startPt.name, lat: startPt.lat, lng: startPt.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot : null;
+        const endSpot = { id: '__end__', name: point.name, lat: point.lat, lng: point.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot;
+        const allPoints: Spot[] = [
+          ...(startSpot ? [startSpot] : []),
+          ...updatedDay.spots,
+          endSpot,
+        ];
+        if (allPoints.length >= 2) {
+          const routes = await calculateAllRoutes(allPoints);
+          const checked = checkRouteOptimality(routes);
+          updateDay(date, (d) => ({ ...d, routes: checked }));
+        }
+      }
+    } catch {
+      // non-blocking
+    } finally {
+      setSettingPoint(null);
+    }
   }
 
   function handleDelete(date: string, spot: Spot) {
@@ -180,6 +219,29 @@ export default function OverviewScreen() {
                           {day.dayEnd?.name ?? currentTrip?.hotel?.name ?? '市中心（默认）'}
                         </Text>
                       </View>
+                      {/* Quick-set buttons — only on last day */}
+                      {di === days.length - 1 && (
+                        <View style={styles.quickSetRow}>
+                          {settingPoint === day.date ? (
+                            <ActivityIndicator size="small" color={Colors.primary} />
+                          ) : (
+                            <>
+                              <TouchableOpacity
+                                style={styles.quickSetBtn}
+                                onPress={() => handleQuickSetEnd(day.date, 'station')}
+                              >
+                                <Text style={styles.quickSetText}>🚉车站</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.quickSetBtn}
+                                onPress={() => handleQuickSetEnd(day.date, 'airport')}
+                              >
+                                <Text style={styles.quickSetText}>✈️机场</Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -354,6 +416,14 @@ const styles = StyleSheet.create({
   dayPointIcon: { fontSize: 14 },
   dayPointLabel: { fontSize: 10, color: Colors.textMuted },
   dayPointValue: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '500' },
+  quickSetRow: { flexDirection: 'row', gap: 4 },
+  quickSetBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.primaryLight,
+  },
+  quickSetText: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
   emptySpot: { fontSize: FontSize.sm, color: Colors.textMuted, textAlign: 'center', padding: Spacing.md },
 
   spotCard: {
