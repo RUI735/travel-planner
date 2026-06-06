@@ -118,7 +118,6 @@ export default function HomeScreen() {
                 styles.tripChipText,
                 trip.id === activeTripId && styles.tripChipTextActive,
               ]}
-              numberOfLines={1}
             >
               {trip.destination}
               <Text style={styles.tripChipDate}>
@@ -198,13 +197,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   tripChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.textMuted,
     backgroundColor: Colors.white,
     alignItems: 'flex-start',
+    flexShrink: 0,
   },
   tripChipActive: {
     borderColor: Colors.primary,
