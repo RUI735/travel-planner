@@ -4,7 +4,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useRouter } from 'expo-router';
 import { useTripStore } from '../src/store/useTripStore';
 import { generateTrip } from '../src/services/ai';
-import { Trip, Hotel, Pace } from '../src/types/trip';
+import { Trip, Hotel, Pace, PartyType } from '../src/types/trip';
 import { searchPOI, POIResult, calculateTripRoutes } from '../src/services/map';
 import LoadingOverlay from '../src/components/LoadingOverlay';
 import { Colors, FontSize, Radius, Spacing } from '../src/theme';
@@ -15,6 +15,20 @@ const PACE_OPTIONS: { key: Pace; label: string; desc: string }[] = [
   { key: 'intensive', label: '🏃 特种兵', desc: '每天4-5个' },
 ];
 const PACE_SPOTS: Record<Pace, number> = { relaxed: 3, balanced: 4, intensive: 5 };
+
+const PARTY_TYPES: { key: PartyType; label: string }[] = [
+  { key: 'solo', label: '👤 单人' },
+  { key: 'couple', label: '💑 情侣' },
+  { key: 'family_kids', label: '👶 亲子' },
+  { key: 'elderly', label: '🧓 老人' },
+  { key: 'friends', label: '👥 朋友' },
+  { key: 'family', label: '👨‍👩‍👧 家庭' },
+];
+const PARTY_TAGS: { key: string; label: string }[] = [
+  { key: 'elderly', label: '🧓 老人同行' },
+  { key: 'infant', label: '👶 婴幼儿' },
+  { key: 'wheelchair', label: '♿ 无障碍需求' },
+];
 const INTEREST_TAGS = ['美食', '人文历史', '自然风光', '拍照打卡', '文艺展览', '购物', '夜生活', '小众秘境'];
 const PRACTICAL_TAGS = ['学生优惠'];
 const BUDGET_TIERS = [
@@ -32,6 +46,8 @@ export default function CreateScreen() {
   const [endDate, setEndDate] = useState('');
   const [selectedPrefs, setSelectedPrefs] = useState<string[]>([]);
   const [pace, setPace] = useState<Pace | null>(null);
+  const [partyType, setPartyType] = useState<PartyType | null>(null);
+  const [partyTags, setPartyTags] = useState<string[]>([]);
   const [partySize, setPartySize] = useState(2);
   const [budgetTier, setBudgetTier] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -135,6 +151,8 @@ export default function CreateScreen() {
         partySize,
         budgetTier,
         pace,
+        partyType,
+        partyTags,
       });
 
       let trip: Trip = {
@@ -144,6 +162,8 @@ export default function CreateScreen() {
         partySize,
         budgetTier,
         pace,
+        partyType,
+        partyTags,
         hotel,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -292,6 +312,54 @@ export default function CreateScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ---- 出行人群 ---- */}
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>出行人群</Text>
+          <TouchableOpacity onPress={() => { setPartyType(null); setPartyTags([]); }}>
+            <Text style={styles.skipLink}>跳过</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.prefRow}>
+          {PARTY_TYPES.map((pt) => (
+            <TouchableOpacity
+              key={pt.key}
+              style={[styles.prefChip, partyType === pt.key && styles.prefChipActive]}
+              onPress={() => {
+                setPartyType(partyType === pt.key ? null : pt.key);
+                if (partyType === pt.key) setPartyTags([]);
+              }}
+            >
+              <Text style={[styles.prefText, partyType === pt.key && styles.prefTextActive]}>
+                {pt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ---- 补充标签（仅亲子或老人时显示）---- */}
+        {(partyType === 'family_kids' || partyType === 'elderly') && (
+          <>
+            <Text style={styles.sublabel}>补充标签</Text>
+            <View style={styles.prefRow}>
+              {PARTY_TAGS.map((tag) => (
+                <TouchableOpacity
+                  key={tag.key}
+                  style={[styles.prefChip, partyTags.includes(tag.key) && styles.prefChipActive]}
+                  onPress={() => {
+                    setPartyTags((prev) =>
+                      prev.includes(tag.key) ? prev.filter((t) => t !== tag.key) : [...prev, tag.key]
+                    );
+                  }}
+                >
+                  <Text style={[styles.prefText, partyTags.includes(tag.key) && styles.prefTextActive]}>
+                    {tag.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* ---- 旅行节奏 ---- */}
         <Text style={styles.label}>旅行节奏</Text>
         <View style={styles.paceRow}>
@@ -416,6 +484,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   scrollContent: { padding: Spacing.xl },
   label: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text, marginTop: Spacing.xl, marginBottom: 6 },
+  sublabel: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.md, marginBottom: 6 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.xl, marginBottom: 6 },
+  skipLink: { fontSize: FontSize.sm, color: Colors.textMuted, fontWeight: '500' },
   input: { borderWidth: 1, borderColor: Colors.textMuted, borderRadius: Radius.md, padding: Spacing.md, fontSize: FontSize.md, color: Colors.text },
   inputError: { borderColor: Colors.error },
   error: { color: Colors.error, fontSize: FontSize.xs, marginTop: Spacing.xs },

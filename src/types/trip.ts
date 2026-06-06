@@ -81,6 +81,7 @@ export interface Hotel {
 }
 
 export type Pace = 'relaxed' | 'balanced' | 'intensive';
+export type PartyType = 'solo' | 'couple' | 'family_kids' | 'elderly' | 'friends' | 'family';
 
 export type PlanStrategy = 'standard' | 'weather_adaptive';
 
@@ -102,6 +103,8 @@ export interface Trip {
   partySize: number;
   budgetTier: string | null;
   pace: Pace | null;
+  partyType: PartyType | null;
+  partyTags: string[];
   hotel: Hotel | null;
   plans: TripPlan[];
   activePlanId: string | null;

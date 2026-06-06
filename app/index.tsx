@@ -18,6 +18,14 @@ const PACE_LABELS: Record<string, string> = {
   balanced: '经典均衡',
   intensive: '特种兵',
 };
+const PARTY_LABELS: Record<string, string> = {
+  solo: '单人',
+  couple: '情侣',
+  family_kids: '亲子',
+  elderly: '老人',
+  friends: '朋友',
+  family: '家庭',
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -53,6 +61,9 @@ export default function HomeScreen() {
   const metaParts: string[] = [];
   if (currentTrip) {
     metaParts.push(`👥 ${currentTrip.partySize}人`);
+    if (currentTrip.partyType) {
+      metaParts.push(`${PARTY_LABELS[currentTrip.partyType] ?? currentTrip.partyType}`);
+    }
     if (currentTrip.pace) {
       metaParts.push(`🚶 ${PACE_LABELS[currentTrip.pace] ?? currentTrip.pace}`);
     }

@@ -93,6 +93,8 @@ export interface GenerateTripInput {
   partySize: number;
   budgetTier: string | null;
   pace: string | null;
+  partyType: string | null;
+  partyTags: string[];
 }
 
 export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>> {
@@ -106,6 +108,19 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
     : '';
 
   const partyNote = `Traveling with ${input.partySize} people.`;
+
+  const partyTypeLabels: Record<string, string> = {
+    solo: 'Traveling solo — can move fast, prefer flexible timing and social hostel/cafe vibes.',
+    couple: 'Traveling as a couple — prioritize romantic spots, photo ops, cozy dining, relaxed evenings.',
+    family_kids: 'Traveling with young children — prioritize kid-friendly attractions, avoid strenuous hikes and long walks, start after 9am, include rest breaks.',
+    elderly: 'Traveling with elderly — avoid steep climbs and long walks, prioritize accessible spots, include frequent rest breaks, prefer seated dining.',
+    friends: 'Traveling with friends (young group) — social, photo-friendly, nightlife OK, flexible pace.',
+    family: 'Traveling as a family — mix of adult and kid interests, balance active and relaxed activities.',
+  };
+  const partyTypeNote = input.partyType ? partyTypeLabels[input.partyType] ?? '' : '';
+  const partyTagsNote = input.partyTags.length > 0
+    ? `Additional needs: ${input.partyTags.map((t) => t === 'elderly' ? 'elderly accompaniment' : t === 'infant' ? 'infant/toddler' : 'wheelchair accessible').join(', ')}.`
+    : '';
 
   const budgetLabels: Record<string, string> = {
     economy: 'Budget: economy (经济型) — prefer affordable dining, free/cheap attractions, public transit.',
@@ -181,6 +196,8 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
   const userMessage = `Plan a trip to ${input.destination}.
 Dates: ${input.startDate} to ${input.endDate} (${days.length} days).
 ${partyNote}
+${partyTypeNote}
+${partyTagsNote}
 ${budgetNote}
 ${paceNote}
 ${prefs}
@@ -272,6 +289,8 @@ ${weatherSection}${multiPlanInstruction}`;
     budgetTier: input.budgetTier,
     hotel: null,
     pace: (input.pace as 'relaxed' | 'balanced' | 'intensive' | null) ?? null,
+    partyType: (input.partyType as 'solo' | 'couple' | 'family_kids' | 'elderly' | 'friends' | 'family' | null) ?? null,
+    partyTags: input.partyTags,
     plans: tripPlans,
     activePlanId: tripPlans[0]?.id ?? null,
   };

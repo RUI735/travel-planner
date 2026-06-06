@@ -65,6 +65,13 @@ function migrateTrip(trip: Trip): Trip {
   if (trip.pace === undefined) {
     trip.pace = null;
   }
+  // Migration: default partyType and partyTags for old trips
+  if (trip.partyType === undefined) {
+    trip.partyType = null;
+  }
+  if (trip.partyTags === undefined) {
+    trip.partyTags = [];
+  }
   // Migration: wrap old top-level "days" into a single TripPlan
   if ((trip as any).days && (!trip.plans || trip.plans.length === 0)) {
     const legacyDays = (trip as any).days;
