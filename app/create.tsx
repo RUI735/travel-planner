@@ -186,8 +186,8 @@ export default function CreateScreen() {
         updatedAt: new Date().toISOString(),
       };
 
-      // Calculate complete Leg chain (hotel → spots → hotel) for all days
-      if (hotel || trip.plans.some((p) => p.days.some((d) => d.spots.length >= 2))) {
+      // Calculate complete Leg chain for all days (at least 1 spot needed)
+      if (trip.plans.some((p) => p.days.some((d) => d.spots.length >= 1))) {
         try {
           trip = await calculateTripRoutes(trip);
         } catch {

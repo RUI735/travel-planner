@@ -414,15 +414,14 @@ export default function DayDetailScreen() {
             {/* Start → First Spot */}
             {(() => {
               const startRoute = day.routes.find((r) => r.fromSpotId === '__start__');
+              if (!startRoute) return null;
               return (
                 <View style={styles.hotelLeg}>
                   <Text style={styles.hotelLegIcon}>🏁</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.hotelLegName}>从 {getStartLabel()} 出发</Text>
                     <Text style={styles.hotelLegRoute}>
-                      {startRoute
-                        ? `🚗 约 ${startRoute.driveMinutes} 分钟 · 🚌 约 ${startRoute.transitMinutes} 分钟 · ${startRoute.distanceKm} km`
-                        : '路线计算中...'}
+                      🚗 约 {startRoute.driveMinutes} 分钟 · 🚌 约 {startRoute.transitMinutes} 分钟 · {startRoute.distanceKm} km
                     </Text>
                   </View>
                   <Text style={styles.hotelLegArrow}>↓</Text>
@@ -485,15 +484,14 @@ export default function DayDetailScreen() {
             {/* Last Spot → End */}
             {(() => {
               const returnRoute = day.routes.find((r) => r.toSpotId === '__end__');
+              if (!returnRoute) return null;
               return (
                 <View style={styles.hotelLeg}>
                   <Text style={styles.hotelLegArrow}>↓</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.hotelLegName}>返回 {getEndLabel()}</Text>
                     <Text style={styles.hotelLegRoute}>
-                      {returnRoute
-                        ? `🚗 约 ${returnRoute.driveMinutes} 分钟 · 🚌 约 ${returnRoute.transitMinutes} 分钟 · ${returnRoute.distanceKm} km`
-                        : '路线计算中...'}
+                      🚗 约 {returnRoute.driveMinutes} 分钟 · 🚌 约 {returnRoute.transitMinutes} 分钟 · {returnRoute.distanceKm} km
                     </Text>
                   </View>
                   <Text style={styles.hotelLegIcon}>🏁</Text>
