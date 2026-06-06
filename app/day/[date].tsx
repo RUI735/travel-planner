@@ -39,6 +39,7 @@ export default function DayDetailScreen() {
   const [mealQuery, setMealQuery] = useState('');
   const [mealResults, setMealResults] = useState<POIResult[]>([]);
   const [searchingMeal, setSearchingMeal] = useState(false);
+  const [explainExpanded, setExplainExpanded] = useState(false);
 
   const hotel = currentTrip?.hotel;
 
@@ -272,6 +273,25 @@ export default function DayDetailScreen() {
           );
         }
         return null;
+      })()}
+
+      {/* Explain note — collapsible strategy summary */}
+      {(() => {
+        const activePlan = currentTrip?.plans.find((p) => p.id === currentTrip?.activePlanId);
+        if (!activePlan?.explainNote) return null;
+        return (
+          <TouchableOpacity
+            style={styles.explainBar}
+            onPress={() => setExplainExpanded(!explainExpanded)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.explainIcon}>📋</Text>
+            <Text style={styles.explainText} numberOfLines={explainExpanded ? 0 : 1}>
+              {activePlan.explainNote}
+            </Text>
+            <Text style={styles.explainChevron}>{explainExpanded ? '▾' : '▸'}</Text>
+          </TouchableOpacity>
+        );
       })()}
 
       {day.weather && (
@@ -674,6 +694,19 @@ const styles = StyleSheet.create({
   },
   changeNoteIcon: { fontSize: 14 },
   changeNoteText: { fontSize: FontSize.xs, color: '#5D4E37', flex: 1, lineHeight: 18 },
+  explainBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    padding: Spacing.sm,
+    backgroundColor: '#F0F4F8',
+    borderRadius: Radius.md,
+    gap: Spacing.sm,
+  },
+  explainIcon: { fontSize: 13 },
+  explainText: { fontSize: FontSize.xs, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
+  explainChevron: { fontSize: 12, color: Colors.textMuted },
   dayNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.primaryLight },
   dayNavArrow: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
   dayNavCenter: { alignItems: 'center' },

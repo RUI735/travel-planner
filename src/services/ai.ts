@@ -20,6 +20,7 @@ Return ONLY valid JSON matching this structure:
       "strategy": "standard",
       "label": "经典版",
       "changeNote": "",
+      "explainNote": "经典均衡节奏，朋友结伴出行，晴好天气全程户外优先",
       "days": [
         {
           "date": "YYYY-MM-DD",
@@ -95,7 +96,8 @@ IMPORTANT — You are generating TWO plans because the forecast shows bad weathe
 
 For Plan 2's "changeNote", write a concise summary of what was changed vs Plan 1. Format: "月/日 天气：原景点→替换景点". Example: "6/10中雨：海边骑行→海洋馆，山顶日落→城市观景厅". Keep it under 100 characters.
 
-Both plans should be equally practical and well-structured. Do NOT mark Plan 2 as inferior — it should be a genuine weather-safe alternative.`;
+Both plans should be equally practical and well-structured. Do NOT mark Plan 2 as inferior — it should be a genuine weather-safe alternative.
+- For each plan, include "explainNote": a concise summary (under 80 chars) of the key strategy factors. Example: "休闲慢游节奏，情侣出行，无爬山，阴天优先室内". Mention pace, group type, active constraints, and weather adaptation (if applicable). Use Chinese.`;
 
 export interface GenerateTripInput {
   destination: string;
@@ -264,7 +266,7 @@ ${weatherSection}${multiPlanInstruction}`;
   }
 
   // Parse plans from response (backward compat: if AI returned "days" at top level, wrap it)
-  const rawPlans: any[] = parsed.plans ?? [{ strategy: 'standard', label: '经典版', changeNote: '', days: parsed.days ?? [] }];
+  const rawPlans: any[] = parsed.plans ?? [{ strategy: 'standard', label: '经典版', changeNote: '', explainNote: '', days: parsed.days ?? [] }];
 
   const tripPlans: TripPlan[] = rawPlans.map((p: any, pi: number) => {
     const planId = `plan-${pi}-${Date.now()}`;
@@ -320,6 +322,7 @@ ${weatherSection}${multiPlanInstruction}`;
       strategy: p.strategy ?? 'standard',
       label: p.label ?? (pi === 0 ? '经典版' : '天气友好版'),
       changeNote: p.changeNote ?? '',
+      explainNote: p.explainNote ?? '',
       days: planDays,
     };
   });

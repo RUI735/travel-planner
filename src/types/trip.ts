@@ -109,7 +109,8 @@ export interface TripPlan {
   id: string;
   strategy: PlanStrategy;
   label: string;
-  changeNote: string; // e.g. "6/10中雨：海边→海洋馆，观景台→城市展厅"
+  changeNote: string;
+  explainNote: string;
   days: Day[];
 }
 

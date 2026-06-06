@@ -84,6 +84,7 @@ function migrateTrip(trip: Trip): Trip {
         strategy: 'standard',
         label: '经典版',
         changeNote: '',
+        explainNote: '',
         days: legacyDays,
       },
     ];
