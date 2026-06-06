@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useTripStore } from '../src/store/useTripStore';
 import { generateTrip } from '../src/services/ai';
 import { Trip, Hotel } from '../src/types/trip';
-import { searchPOI, POIResult } from '../src/services/map';
+import { searchPOI, POIResult, calculateTripRoutes } from '../src/services/map';
 import LoadingOverlay from '../src/components/LoadingOverlay';
 import { Colors, FontSize, Radius, Spacing } from '../src/theme';
 
@@ -128,7 +128,7 @@ export default function CreateScreen() {
         budgetTier,
       });
 
-      const trip: Trip = {
+      let trip: Trip = {
         ...tripData,
         id: `trip-${Date.now()}`,
         isStudent: student,
@@ -138,6 +138,15 @@ export default function CreateScreen() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+
+      // Calculate complete Leg chain (hotel → spots → hotel) for all days
+      if (hotel || trip.plans.some((p) => p.days.some((d) => d.spots.length >= 2))) {
+        try {
+          trip = await calculateTripRoutes(trip);
+        } catch {
+          // Route calc failure is non-blocking — proceed without routes
+        }
+      }
 
       addTrip(trip);
       router.replace('/');

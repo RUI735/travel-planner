@@ -122,8 +122,8 @@ export default function DayDetailScreen() {
         }
       }
 
-      // Routes: calculate if needed
-      if (day!.spots.length >= 1) {
+      // Routes: calculate only if not already populated from generation
+      if (day!.routes.length === 0 && day!.spots.length >= 1) {
         setLoading(true);
         try {
           const allPoints = hotelSpot

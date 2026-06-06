@@ -1,5 +1,5 @@
 // src/services/map.ts
-import { Spot, RouteSegment } from '../types/trip';
+import { Spot, RouteSegment, Trip, Hotel } from '../types/trip';
 import Constants from 'expo-constants';
 
 const API_KEY = Constants.expoConfig?.extra?.amapApiKey ?? '';
@@ -118,6 +118,50 @@ export async function calculateAllRoutes(spots: Spot[]): Promise<RouteSegment[]>
   }
 
   return routes;
+}
+
+function makeHotelSpot(hotel: Hotel): Spot {
+  return {
+    id: '__hotel__',
+    name: hotel.name,
+    lat: hotel.lat,
+    lng: hotel.lng,
+    order: 0,
+    reminders: [],
+    notes: '',
+  };
+}
+
+/** Calculate complete Leg chain for all days in a trip: hotel → spots → hotel */
+export async function calculateTripRoutes(trip: Trip): Promise<Trip> {
+  const hotelSpot = trip.hotel ? makeHotelSpot(trip.hotel) : null;
+
+  const updatedPlans = await Promise.all(
+    trip.plans.map(async (plan) => {
+      const updatedDays = await Promise.all(
+        plan.days.map(async (day) => {
+          // Skip if no spots or routes already calculated
+          if (day.spots.length === 0) return day;
+          if (day.routes.length > 0) return day;
+
+          const allPoints = hotelSpot
+            ? [hotelSpot, ...day.spots, hotelSpot]
+            : day.spots.length >= 2
+              ? day.spots
+              : [];
+
+          if (allPoints.length < 2) return day;
+
+          const routes = await calculateAllRoutes(allPoints);
+          const checked = checkRouteOptimality(routes);
+          return { ...day, routes: checked };
+        })
+      );
+      return { ...plan, days: updatedDays };
+    })
+  );
+
+  return { ...trip, plans: updatedPlans, updatedAt: new Date().toISOString() };
 }
 
 export function checkRouteOptimality(routes: RouteSegment[]): RouteSegment[] {
