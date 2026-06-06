@@ -92,7 +92,7 @@ Student Discount Annotation Rules:
 const WEATHER_ADAPTIVE_DIFF_RULE = `
 IMPORTANT — You are generating TWO plans because the forecast shows bad weather:
 - Plan 1 (strategy: "standard", label: "经典版"): Plan as if weather is fine. Keep outdoor spots (beaches, parks, viewpoints, hikes) in the itinerary.
-- Plan 2 (strategy: "weather_adaptive", label: "天气友好版"): ONLY change days that actually have rain/overcast/snow/fog/typhoon in the forecast. On those days, reduce outdoor spots and replace with indoor alternatives. On sunny/cloudy days, keep the EXACT same spots as Plan 1 — do not change anything. The two plans must be identical on clear-weather days.
+- Plan 2 (strategy: "weather_adaptive", label: "天气友好版"): ONLY change days that have rain/snow/fog/typhoon, OR overcast days where the destination is coastal/beach/mountain/scenic (overcast in city destinations does NOT need differentiation). On those days, reduce outdoor spots and replace with indoor alternatives. On all other days (sunny, cloudy, city-overcast), keep the EXACT same spots as Plan 1 — do not change anything. The two plans must be identical on days that don't need weather adaptation.
 
 For Plan 2's "changeNote", write a concise summary of what was changed vs Plan 1, only mentioning the bad-weather days. Format: "月/日 天气：原景点→替换景点". Example: "6/10中雨：海边骑行→海洋馆，山顶日落→城市观景厅". If only one day differs, only mention that day. Keep it under 100 characters.
 - For each plan, include "explainNote": a concise summary (under 80 chars) of the key strategy factors. Example: "休闲慢游节奏，情侣出行，无爬山，阴天优先室内". Mention pace, group type, active constraints, and weather adaptation (if applicable). Use Chinese.`;

@@ -236,12 +236,15 @@ export default function DayDetailScreen() {
         ) : <View />}
       </View>
 
-      {/* Plan switcher — only shown when there are 2+ plans AND current day has bad weather */}
-      {currentTrip && currentTrip.plans.length > 1 && day && (
-        ['heavy_rain', 'moderate_rain', 'light_rain', 'overcast', 'snow', 'typhoon', 'fog'].includes(
-          day.weather?.condition ?? ''
-        )
-      ) && (
+      {/* Plan switcher — only shown when plans actually differ for this day */}
+      {currentTrip && currentTrip.plans.length > 1 && day && (() => {
+        const plans = currentTrip.plans;
+        const daySpots = plans.map((p) =>
+          p.days.find((d) => d.date === date)?.spots.map((s) => s.name).sort().join(',') ?? ''
+        );
+        const hasDiff = new Set(daySpots).size > 1;
+        return hasDiff;
+      })() && (
         <View style={styles.planSwitcher}>
           {currentTrip.plans.map((plan) => (
             <TouchableOpacity
@@ -265,11 +268,15 @@ export default function DayDetailScreen() {
         </View>
       )}
 
-      {/* Change note — only on bad-weather days */}
+      {/* Change note — only when plans differ for this day */}
       {(() => {
-        const isBad = day && ['heavy_rain', 'moderate_rain', 'light_rain', 'overcast', 'snow', 'typhoon', 'fog'].includes(day.weather?.condition ?? '');
-        if (!isBad) return null;
-        const activePlan = currentTrip?.plans.find((p) => p.id === currentTrip?.activePlanId);
+        const plans = currentTrip?.plans;
+        if (!plans || plans.length < 2) return null;
+        const daySpots = plans.map((p) =>
+          p.days.find((d) => d.date === date)?.spots.map((s) => s.name).sort().join(',') ?? ''
+        );
+        if (new Set(daySpots).size <= 1) return null;
+        const activePlan = plans.find((p) => p.id === currentTrip?.activePlanId);
         if (activePlan?.changeNote) {
           return (
             <View style={styles.changeNoteBanner}>
