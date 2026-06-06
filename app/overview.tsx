@@ -29,6 +29,15 @@ function getDateLabel(dateStr: string): string {
   return `${m}月${day}日 ${WEEKDAYS[d.getDay()]}`;
 }
 
+function getPointIcon(name: string): string {
+  if (!name) return '📍';
+  if (name.includes('酒店') || name.includes('宾馆') || name.includes('民宿') || name.includes('Hotel')) return '🏨';
+  if (name.includes('站') || name.includes('火车站') || name.includes('高铁')) return '🚉';
+  if (name.includes('机场') || name.includes('Airport')) return '✈️';
+  if (name.includes('市中心') || name.includes('默认')) return '📍';
+  return '🏁';
+}
+
 const WEATHER_ICONS: Record<string, string> = {
   sunny: '☀️',
   cloudy: '⛅',
@@ -203,7 +212,7 @@ export default function OverviewScreen() {
                   {/* Day start/end info */}
                   <View style={styles.dayPointRow}>
                     <View style={styles.dayPointItem}>
-                      <Text style={styles.dayPointIcon}>🏁</Text>
+                      <Text style={styles.dayPointIcon}>{getPointIcon(day.dayStart?.name ?? currentTrip?.hotel?.name ?? '')}</Text>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.dayPointLabel}>起点</Text>
                         <Text style={styles.dayPointValue} numberOfLines={1}>
@@ -212,7 +221,7 @@ export default function OverviewScreen() {
                       </View>
                     </View>
                     <View style={styles.dayPointItem}>
-                      <Text style={styles.dayPointIcon}>🏁</Text>
+                      <Text style={styles.dayPointIcon}>{getPointIcon(day.dayEnd?.name ?? currentTrip?.hotel?.name ?? '')}</Text>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.dayPointLabel}>终点</Text>
                         <Text style={styles.dayPointValue} numberOfLines={1}>

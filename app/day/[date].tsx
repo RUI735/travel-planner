@@ -53,6 +53,14 @@ export default function DayDetailScreen() {
     return '市中心（默认）';
   }
 
+  function getPointIcon(name: string): string {
+    if (name.includes('酒店') || name.includes('宾馆') || name.includes('民宿') || name.includes('Hotel')) return '🏨';
+    if (name.includes('站') || name.includes('火车站') || name.includes('高铁')) return '🚉';
+    if (name.includes('机场') || name.includes('Airport')) return '✈️';
+    if (name.includes('市中心') || name.includes('默认')) return '📍';
+    return '🏁';
+  }
+
   function getEndLabel(): string {
     if (day?.dayEnd) return day.dayEnd.name;
     if (hotel) return hotel.name;
@@ -387,7 +395,7 @@ export default function DayDetailScreen() {
             setPointResults([]);
           }}
         >
-          <Text style={styles.pointEditIcon}>🏁</Text>
+          <Text style={styles.pointEditIcon}>{getPointIcon(day.dayStart?.name ?? getStartLabel())}</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.pointEditLabel}>起点</Text>
             <Text style={styles.pointEditValue} numberOfLines={1}>
@@ -404,7 +412,7 @@ export default function DayDetailScreen() {
             setPointResults([]);
           }}
         >
-          <Text style={styles.pointEditIcon}>🏁</Text>
+          <Text style={styles.pointEditIcon}>{getPointIcon(day.dayEnd?.name ?? getEndLabel())}</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.pointEditLabel}>终点</Text>
             <Text style={styles.pointEditValue} numberOfLines={1}>
@@ -537,7 +545,7 @@ export default function DayDetailScreen() {
               if (!startRoute) return null;
               return (
                 <View style={styles.hotelLeg}>
-                  <Text style={styles.hotelLegIcon}>🏁</Text>
+                  <Text style={styles.hotelLegIcon}>{getPointIcon(getStartLabel())}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.hotelLegName}>从 {getStartLabel()} 出发</Text>
                     <Text style={styles.hotelLegRoute}>
@@ -614,7 +622,7 @@ export default function DayDetailScreen() {
                       🚗 约 {returnRoute.driveMinutes} 分钟 · 🚌 约 {returnRoute.transitMinutes} 分钟 · {returnRoute.distanceKm} km
                     </Text>
                   </View>
-                  <Text style={styles.hotelLegIcon}>🏁</Text>
+                  <Text style={styles.hotelLegIcon}>{getPointIcon(getEndLabel())}</Text>
                 </View>
               );
             })()}
