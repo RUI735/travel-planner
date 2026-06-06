@@ -161,6 +161,28 @@ export default function OverviewScreen() {
               {/* Spot list — visible when expanded */}
               {isExpanded && (
                 <View style={styles.spotList}>
+                  {/* Day start/end info */}
+                  <View style={styles.dayPointRow}>
+                    <View style={styles.dayPointItem}>
+                      <Text style={styles.dayPointIcon}>🏁</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dayPointLabel}>起点</Text>
+                        <Text style={styles.dayPointValue} numberOfLines={1}>
+                          {day.dayStart?.name ?? currentTrip?.hotel?.name ?? '市中心（默认）'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.dayPointItem}>
+                      <Text style={styles.dayPointIcon}>🏁</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dayPointLabel}>终点</Text>
+                        <Text style={styles.dayPointValue} numberOfLines={1}>
+                          {day.dayEnd?.name ?? currentTrip?.hotel?.name ?? '市中心（默认）'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
                   {visibleSpots.length === 0 ? (
                     <Text style={styles.emptySpot}>暂无景点</Text>
                   ) : (
@@ -319,6 +341,19 @@ const styles = StyleSheet.create({
 
   // Spot list
   spotList: { padding: Spacing.md, paddingTop: 0, gap: Spacing.sm },
+  dayPointRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  dayPointItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+  },
+  dayPointIcon: { fontSize: 14 },
+  dayPointLabel: { fontSize: 10, color: Colors.textMuted },
+  dayPointValue: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '500' },
   emptySpot: { fontSize: FontSize.sm, color: Colors.textMuted, textAlign: 'center', padding: Spacing.md },
 
   spotCard: {

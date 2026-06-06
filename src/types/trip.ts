@@ -74,10 +74,18 @@ export interface RouteSegment {
   isOptimal: boolean;
 }
 
+export interface DayPoint {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export interface Day {
   date: string;
   weather: Weather | null;
   weatherAlert: WeatherAlert | null;
+  dayStart: DayPoint | null;
+  dayEnd: DayPoint | null;
   spots: Spot[];
   routes: RouteSegment[];
   budgetNote: string | null;

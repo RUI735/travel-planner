@@ -37,19 +37,32 @@ export default function DayDetailScreen() {
   const [pendingDelete, setPendingDelete] = useState<{ spot: Spot; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   const hotel = currentTrip?.hotel;
-  const hotelSpot: Spot | null = hotel
-    ? { id: '__hotel__', name: hotel.name, lat: hotel.lat, lng: hotel.lng, order: 0, reminders: [], notes: '', durationMin: null }
-    : null;
+
+  function getStartLabel(): string {
+    if (day?.dayStart) return day.dayStart.name;
+    if (hotel) return hotel.name;
+    return '市中心（默认）';
+  }
+
+  function getEndLabel(): string {
+    if (day?.dayEnd) return day.dayEnd.name;
+    if (hotel) return hotel.name;
+    return '市中心（默认）';
+  }
 
   async function recalcRoutes(spots: Spot[]) {
     try {
-      if (hotelSpot && spots.length >= 1) {
-        const allPoints = [hotelSpot, ...spots, hotelSpot];
+      const startPoint = day?.dayStart ?? currentTrip?.hotel;
+      const endPoint = day?.dayEnd ?? currentTrip?.hotel;
+      const startSpot = startPoint ? { id: '__start__', name: startPoint.name, lat: startPoint.lat, lng: startPoint.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot : null;
+      const endSpot = endPoint ? { id: '__end__', name: endPoint.name, lat: endPoint.lat, lng: endPoint.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot : null;
+      const allPoints: Spot[] = [
+        ...(startSpot ? [startSpot] : []),
+        ...spots,
+        ...(endSpot ? [endSpot] : []),
+      ];
+      if (allPoints.length >= 2) {
         const routes = await calculateAllRoutes(allPoints);
-        const checked = checkRouteOptimality(routes);
-        updateDay(date, (d) => ({ ...d, routes: checked }));
-      } else if (spots.length >= 2) {
-        const routes = await calculateAllRoutes(spots);
         const checked = checkRouteOptimality(routes);
         updateDay(date, (d) => ({ ...d, routes: checked }));
       } else {
@@ -88,10 +101,20 @@ export default function DayDetailScreen() {
 
     // Recalculate routes
     const updatedDay = getActiveDays(useTripStore.getState().currentTrip!).find((d) => d.date === date);
-    if (updatedDay && updatedDay.spots.length >= 2) {
-      const routes = await calculateAllRoutes(updatedDay.spots);
-      const checked = checkRouteOptimality(routes);
-      updateDay(date, (d) => ({ ...d, routes: checked }));
+    if (updatedDay && updatedDay.spots.length >= 1) {
+      const trip = useTripStore.getState().currentTrip!;
+      const startPt = updatedDay.dayStart ?? trip.hotel;
+      const endPt = updatedDay.dayEnd ?? trip.hotel;
+      const pts: Spot[] = [
+        ...(startPt ? [{ id: '__start__', name: startPt.name, lat: startPt.lat, lng: startPt.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot] : []),
+        ...updatedDay.spots,
+        ...(endPt ? [{ id: '__end__', name: endPt.name, lat: endPt.lat, lng: endPt.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot] : []),
+      ];
+      if (pts.length >= 2) {
+        const routes = await calculateAllRoutes(pts);
+        const checked = checkRouteOptimality(routes);
+        updateDay(date, (d) => ({ ...d, routes: checked }));
+      }
     }
 
     // Reset search
@@ -130,9 +153,15 @@ export default function DayDetailScreen() {
       if (day!.routes.length === 0 && day!.spots.length >= 1) {
         setLoading(true);
         try {
-          const allPoints = hotelSpot
-            ? [hotelSpot, ...day!.spots, hotelSpot]
-            : day!.spots;
+          const startPoint = day!.dayStart ?? currentTrip?.hotel;
+          const endPoint = day!.dayEnd ?? currentTrip?.hotel;
+          const startSpot = startPoint ? { id: '__start__', name: startPoint.name, lat: startPoint.lat, lng: startPoint.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot : null;
+          const endSpot = endPoint ? { id: '__end__', name: endPoint.name, lat: endPoint.lat, lng: endPoint.lng, order: 0, reminders: [], notes: '', durationMin: null } as Spot : null;
+          const allPoints: Spot[] = [
+            ...(startSpot ? [startSpot] : []),
+            ...day!.spots,
+            ...(endSpot ? [endSpot] : []),
+          ];
           if (allPoints.length >= 2) {
             const routes = await calculateAllRoutes(allPoints);
             const checked = checkRouteOptimality(routes);
@@ -273,17 +302,17 @@ export default function DayDetailScreen() {
 
         {sortedSpots.length > 0 ? (
           <>
-            {/* Hotel → First Spot */}
-            {hotel && (() => {
-              const hotelRoute = day.routes.find((r) => r.fromSpotId === '__hotel__');
+            {/* Start → First Spot */}
+            {(() => {
+              const startRoute = day.routes.find((r) => r.fromSpotId === '__start__');
               return (
                 <View style={styles.hotelLeg}>
-                  <Text style={styles.hotelLegIcon}>🏨</Text>
+                  <Text style={styles.hotelLegIcon}>🏁</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.hotelLegName}>从 {hotel.name} 出发</Text>
+                    <Text style={styles.hotelLegName}>从 {getStartLabel()} 出发</Text>
                     <Text style={styles.hotelLegRoute}>
-                      {hotelRoute
-                        ? `🚗 约 ${hotelRoute.driveMinutes} 分钟 · 🚌 约 ${hotelRoute.transitMinutes} 分钟 · ${hotelRoute.distanceKm} km`
+                      {startRoute
+                        ? `🚗 约 ${startRoute.driveMinutes} 分钟 · 🚌 约 ${startRoute.transitMinutes} 分钟 · ${startRoute.distanceKm} km`
                         : '路线计算中...'}
                     </Text>
                   </View>
@@ -344,21 +373,21 @@ export default function DayDetailScreen() {
               }}
             />
             ))}
-            {/* Last Spot → Hotel */}
-            {hotel && (() => {
-              const returnRoute = day.routes.find((r) => r.toSpotId === '__hotel__');
+            {/* Last Spot → End */}
+            {(() => {
+              const returnRoute = day.routes.find((r) => r.toSpotId === '__end__');
               return (
                 <View style={styles.hotelLeg}>
                   <Text style={styles.hotelLegArrow}>↓</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.hotelLegName}>返回 {hotel.name}</Text>
+                    <Text style={styles.hotelLegName}>返回 {getEndLabel()}</Text>
                     <Text style={styles.hotelLegRoute}>
                       {returnRoute
                         ? `🚗 约 ${returnRoute.driveMinutes} 分钟 · 🚌 约 ${returnRoute.transitMinutes} 分钟 · ${returnRoute.distanceKm} km`
                         : '路线计算中...'}
                     </Text>
                   </View>
-                  <Text style={styles.hotelLegIcon}>🏨</Text>
+                  <Text style={styles.hotelLegIcon}>🏁</Text>
                 </View>
               );
             })()}

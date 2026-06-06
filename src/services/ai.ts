@@ -297,6 +297,8 @@ ${weatherSection}${multiPlanInstruction}`;
         date,
         weather,
         weatherAlert,
+        dayStart: null,
+        dayEnd: null,
         weatherNote: d.weatherNote ?? null,
         budgetNote: d.budgetNote ?? null,
         structuredBudget: d.structuredBudget

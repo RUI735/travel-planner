@@ -93,5 +93,12 @@ function migrateTrip(trip: Trip): Trip {
   if (!trip.activePlanId && trip.plans.length > 0) {
     trip.activePlanId = trip.plans[0].id;
   }
+  // Migration: default dayStart/dayEnd for old trips
+  for (const plan of trip.plans) {
+    for (const day of plan.days) {
+      if (day.dayStart === undefined) day.dayStart = null;
+      if (day.dayEnd === undefined) day.dayEnd = null;
+    }
+  }
   return trip;
 }

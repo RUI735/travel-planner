@@ -1,5 +1,5 @@
 // src/services/map.ts
-import { Spot, RouteSegment, Trip, Hotel } from '../types/trip';
+import { Spot, RouteSegment, Trip, Hotel, DayPoint } from '../types/trip';
 import Constants from 'expo-constants';
 
 const API_KEY = Constants.expoConfig?.extra?.amapApiKey ?? '';
@@ -120,12 +120,12 @@ export async function calculateAllRoutes(spots: Spot[]): Promise<RouteSegment[]>
   return routes;
 }
 
-function makeHotelSpot(hotel: Hotel): Spot {
+function makePointSpot(point: DayPoint | Hotel, id: string): Spot {
   return {
-    id: '__hotel__',
-    name: hotel.name,
-    lat: hotel.lat,
-    lng: hotel.lng,
+    id,
+    name: point.name,
+    lat: point.lat,
+    lng: point.lng,
     order: 0,
     reminders: [],
     notes: '',
@@ -133,10 +133,8 @@ function makeHotelSpot(hotel: Hotel): Spot {
   };
 }
 
-/** Calculate complete Leg chain for all days in a trip: hotel → spots → hotel */
+/** Calculate complete Leg chain for all days in a trip: start → spots → end */
 export async function calculateTripRoutes(trip: Trip): Promise<Trip> {
-  const hotelSpot = trip.hotel ? makeHotelSpot(trip.hotel) : null;
-
   const updatedPlans = await Promise.all(
     trip.plans.map(async (plan) => {
       const updatedDays = await Promise.all(
@@ -145,11 +143,16 @@ export async function calculateTripRoutes(trip: Trip): Promise<Trip> {
           if (day.spots.length === 0) return day;
           if (day.routes.length > 0) return day;
 
-          const allPoints = hotelSpot
-            ? [hotelSpot, ...day.spots, hotelSpot]
-            : day.spots.length >= 2
-              ? day.spots
-              : [];
+          const startPoint = day.dayStart ?? trip.hotel;
+          const endPoint = day.dayEnd ?? trip.hotel;
+          const startSpot = startPoint ? makePointSpot(startPoint, '__start__') : null;
+          const endSpot = endPoint ? makePointSpot(endPoint, '__end__') : null;
+
+          const allPoints: Spot[] = [
+            ...(startSpot ? [startSpot] : []),
+            ...day.spots,
+            ...(endSpot ? [endSpot] : []),
+          ];
 
           if (allPoints.length < 2) return day;
 

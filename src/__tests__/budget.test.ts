@@ -72,7 +72,9 @@ function makeDay(overrides: Partial<Day> = {}): Day {
     budgetNote: null,
     structuredBudget: null,
     ...overrides,
-  };
+    dayStart: overrides.dayStart !== undefined ? overrides.dayStart : null,
+    dayEnd: overrides.dayEnd !== undefined ? overrides.dayEnd : null,
+  } as Day;
 }
 
 describe('getDayBudget', () => {
