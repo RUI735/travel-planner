@@ -1,7 +1,9 @@
 // src/services/ai.ts
 import OpenAI from 'openai';
-import { Trip, Day, SpotReminder } from '../types/trip';
+import { Trip, Day, SpotReminder, Spot, Weather } from '../types/trip';
 import Constants from 'expo-constants';
+import { fetchWeather, getWeatherHint, checkWeatherAlert } from './weather';
+import { geocodeSpot } from './map';
 
 const client = new OpenAI({
   apiKey: Constants.expoConfig?.extra?.deepseekApiKey ?? '',
@@ -16,6 +18,7 @@ Return ONLY valid JSON matching this structure:
   "days": [
     {
       "date": "YYYY-MM-DD",
+      "weatherNote": "今日晴好适合户外，优先西湖骑行和雷峰塔观景",
       "budgetNote": "门票约 ¥120 + 交通约 ¥30 + 餐饮约 ¥80，人均约 ¥230",
       "structuredBudget": {
         "ticketCost": 120,
