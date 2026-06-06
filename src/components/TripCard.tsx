@@ -61,6 +61,9 @@ export default function TripCard({ day, onPress }: Props) {
           {previewText && (
             <Text style={styles.spotPreview} numberOfLines={1}>{previewText}</Text>
           )}
+          {day.weatherNote && (
+            <Text style={styles.weatherNote} numberOfLines={1}>🌤️ {day.weatherNote}</Text>
+          )}
           {day.budgetNote && (
             <Text style={styles.budgetHint} numberOfLines={1}>💰 {day.budgetNote}</Text>
           )}
@@ -89,6 +92,7 @@ const styles = StyleSheet.create({
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.md, alignItems: 'center' },
   spotCount: { fontSize: FontSize.sm, color: Colors.textSecondary },
   spotPreview: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: Spacing.xs },
+  weatherNote: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: Spacing.xs },
   budgetHint: { fontSize: FontSize.xs, color: Colors.budgetAccent, marginTop: Spacing.xs },
   arrow: { fontSize: FontSize.md, color: Colors.textMuted },
 });

@@ -167,6 +167,7 @@ export default function DayDetailScreen() {
         <WeatherBanner
           weather={day.weather}
           alert={day.weatherAlert}
+          weatherNote={day.weatherNote}
         />
       )}
 

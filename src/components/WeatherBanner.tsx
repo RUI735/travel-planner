@@ -6,6 +6,7 @@ import { Colors, FontSize, Radius, Spacing } from '../theme';
 interface Props {
   weather: Weather;
   alert: WeatherAlert | null;
+  weatherNote?: string | null;
 }
 
 const WEATHER_LABELS: Record<string, string> = {
@@ -14,7 +15,7 @@ const WEATHER_LABELS: Record<string, string> = {
   snow: '雪', typhoon: '台风', fog: '雾',
 };
 
-export default function WeatherBanner({ weather, alert }: Props) {
+export default function WeatherBanner({ weather, alert, weatherNote }: Props) {
   const isBad = alert !== null && alert.level === 'red';
   const isMild = alert !== null && alert.level === 'yellow';
   const noForecast = weather.highTemp === -999;
@@ -32,6 +33,9 @@ export default function WeatherBanner({ weather, alert }: Props) {
       )}
       {!noForecast && (
         <Text style={styles.hint}>{getWeatherHint(weather)}</Text>
+      )}
+      {weatherNote && (
+        <Text style={styles.weatherNote}>💡 {weatherNote}</Text>
       )}
       {alert && (
         <View style={styles.alertBox}>
@@ -57,6 +61,7 @@ const styles = StyleSheet.create({
   tempRange: { fontSize: 18, fontWeight: '600', color: Colors.textSecondary },
   detail: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
   hint: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: Spacing.sm, lineHeight: 18 },
+  weatherNote: { fontSize: FontSize.sm, color: Colors.text, marginTop: Spacing.sm, lineHeight: 20, fontWeight: '500' },
   alertBox: { marginTop: Spacing.sm, padding: Spacing.sm, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: Radius.sm },
   alertReason: { fontSize: FontSize.sm, color: Colors.error, fontWeight: '500' },
   suggestion: { fontSize: FontSize.sm, color: Colors.success, marginTop: Spacing.xs },
