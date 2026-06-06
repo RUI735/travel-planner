@@ -47,6 +47,16 @@ export interface Spot {
   notes: string;
 }
 
+export interface Meal {
+  type: 'breakfast' | 'lunch' | 'dinner';
+  name: string;
+  cuisine: string;
+  pricePerPerson: number;
+  lat: number;
+  lng: number;
+  order: number;
+}
+
 export interface DayBudget {
   ticketCost: number;
   transportCost: number;
@@ -72,6 +82,7 @@ export interface Day {
   budgetNote: string | null;
   structuredBudget: DayBudget | null;
   weatherNote: string | null;
+  meals: Meal[];
 }
 
 export interface Hotel {

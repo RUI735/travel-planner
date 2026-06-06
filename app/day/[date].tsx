@@ -246,6 +246,30 @@ export default function DayDetailScreen() {
 
       <View style={styles.spotsSection}>
         <Text style={styles.sectionTitle}>景点安排</Text>
+
+        {/* Meals */}
+        {day.meals.length > 0 && (
+          <View style={styles.mealsRow}>
+            {day.meals
+              .sort((a, b) => a.order - b.order)
+              .map((meal) => {
+                const icons: Record<string, string> = { breakfast: '🍳', lunch: '🍜', dinner: '🍽️' };
+                const labels: Record<string, string> = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' };
+                return (
+                  <View key={meal.type} style={styles.mealCard}>
+                    <Text style={styles.mealIcon}>{icons[meal.type] ?? '🍴'}</Text>
+                    <Text style={styles.mealLabel}>{labels[meal.type] ?? meal.type}</Text>
+                    <Text style={styles.mealName} numberOfLines={1}>{meal.name}</Text>
+                    <Text style={styles.mealCuisine}>{meal.cuisine}</Text>
+                    {meal.pricePerPerson > 0 && (
+                      <Text style={styles.mealPrice}>¥{meal.pricePerPerson}/人</Text>
+                    )}
+                  </View>
+                );
+              })}
+          </View>
+        )}
+
         {sortedSpots.length > 0 ? (
           <>
             {/* Hotel → First Spot */}
@@ -433,6 +457,21 @@ const styles = StyleSheet.create({
   budgetIcon: { fontSize: 18 },
   budgetText: { fontSize: FontSize.sm, color: Colors.budgetText, flex: 1, lineHeight: 20 },
   spotsSection: { padding: Spacing.lg, gap: Spacing.md },
+  mealsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  mealCard: {
+    flex: 1,
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
+  mealIcon: { fontSize: 20, marginBottom: 2 },
+  mealLabel: { fontSize: FontSize.xs, color: Colors.textMuted, fontWeight: '600', marginBottom: 2 },
+  mealName: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600', textAlign: 'center' },
+  mealCuisine: { fontSize: 10, color: Colors.textMuted, marginTop: 1 },
+  mealPrice: { fontSize: 10, color: Colors.budgetAccent, fontWeight: '600', marginTop: 2 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: Spacing.sm },
   addSection: { padding: Spacing.lg, paddingTop: 0 },
   addButton: {

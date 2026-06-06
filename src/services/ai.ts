@@ -31,6 +31,17 @@ Return ONLY valid JSON matching this structure:
             "diningCost": 80,
             "perPersonCost": 230
           },
+          "meals": [
+            {
+              "type": "breakfast",
+              "name": "Restaurant name",
+              "cuisine": "本地小吃",
+              "pricePerPerson": 25,
+              "lat": 39.9042,
+              "lng": 116.4074,
+              "order": 1
+            }
+          ],
           "spots": [
             {
               "name": "Attraction name",
@@ -64,6 +75,7 @@ Rules:
 - Flag student ID or ID requirements when applicable
 - Include reservation requirements (WeChat, website, etc.)
 - Add food/dining suggestions near lunchtime
+- Include meal recommendations as "meals" array for each day: 1 breakfast (unless user selected "no early mornings"), 1 lunch, 1 dinner. Each meal must have: type, name, cuisine, pricePerPerson (CNY integer), lat, lng, order (position in day sequence: breakfast=1, lunch=mid, dinner=last). Choose local, authentic restaurants matching the budget tier. Meals are separate from spots — do NOT put restaurant names in the spots array.
 - Use the weather forecast provided in the user message to write a practical, date-specific "weatherNote" for each day (e.g., "今日大雨，建议优先安排室内景点如博物馆，备好雨具"). Mention temperature comfort, rain/snow impact, and clothing/gear tips. Never fabricate weather — if forecast is unavailable, base advice on the destination's typical climate for the given dates.
 - Keep travel distances reasonable (avoid cross-city jumps)
 - Prefer popular, well-reviewed spots suitable for young travelers aged 18-26
@@ -132,6 +144,10 @@ export async function generateTrip(input: GenerateTripInput): Promise<Omit<Trip,
   const constraintsNote = input.constraints.length > 0
     ? `Constraints:\n${input.constraints.map((c) => `- ${constraintLabels[c] ?? c}`).join('\n')}`
     : '';
+
+  const mealNote = input.constraints.includes('no_early')
+    ? 'Skip breakfast recommendations (user prefers no early mornings). Include only lunch and dinner.'
+    : 'Include breakfast, lunch, and dinner recommendations.';
 
   const budgetLabels: Record<string, string> = {
     economy: 'Budget: economy (经济型) — prefer affordable dining, free/cheap attractions, public transit.',
@@ -210,6 +226,7 @@ ${partyNote}
 ${partyTypeNote}
 ${partyTagsNote}
 ${constraintsNote}
+${mealNote}
 ${budgetNote}
 ${paceNote}
 ${prefs}
@@ -263,6 +280,16 @@ ${weatherSection}${multiPlanInstruction}`;
       }));
       const weatherAlert = weather ? checkWeatherAlert(weather, spots) : null;
 
+      const meals = (d.meals ?? []).map((m: any, mi: number) => ({
+        type: m.type ?? 'lunch',
+        name: m.name ?? '',
+        cuisine: m.cuisine ?? '',
+        pricePerPerson: Number(m.pricePerPerson) || 0,
+        lat: m.lat ?? 0,
+        lng: m.lng ?? 0,
+        order: m.order ?? mi + 1,
+      }));
+
       return {
         date,
         weather,
@@ -279,6 +306,7 @@ ${weatherSection}${multiPlanInstruction}`;
           : null,
         spots,
         routes: [],
+        meals,
       };
     });
 

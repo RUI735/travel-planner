@@ -68,6 +68,7 @@ function makeDay(overrides: Partial<Day> = {}): Day {
     weatherNote: null,
     spots: [],
     routes: [],
+    meals: [],
     budgetNote: null,
     structuredBudget: null,
     ...overrides,
